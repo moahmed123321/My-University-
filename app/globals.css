@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: #f6f5f1;
+  color: #1f2937;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-50;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800;
+  }
+  .input {
+    @apply w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
+  }
+  .link-danger {
+    @apply text-xs text-gray-400 hover:text-red-600;
+  }
+  .th {
+    @apply py-2 pr-3 text-left text-xs font-medium text-gray-500;
+  }
+}
