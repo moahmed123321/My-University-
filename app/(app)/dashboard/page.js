@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { fmtTime, fmtDate, isoDate } from "@/lib/helpers";
-import { removeRow } from "@/lib/db";
 import { Card, Empty, PageHeader } from "@/components/ui";
 import AddMenu from "@/components/AddMenu";
 import ItemTable from "@/components/ItemTable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Dashboard() {
   const [courses, setCourses] = useState([]);
@@ -14,13 +14,12 @@ export default function Dashboard() {
   const [exams, setExams] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [assignments, setAssignments] = useState([]);
-  const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     const iso = isoDate();
     const dow = new Date().getDay();
-    const [c, l, e, t, a, n] = await Promise.all([
+    const [c, l, e, t, a] = await Promise.all([
       supabase.from("courses").select("*").order("name"),
       supabase.from("lectures").select("*, courses(name, code)").eq("day_of_week", dow).order("start_time"),
       supabase.from("exams").select("*, courses(name, code)").gte("exam_date", iso).order("exam_date").limit(5),
@@ -31,14 +30,12 @@ export default function Dashboard() {
         .or(`due_date.lte.${iso},due_date.is.null`)
         .order("due_date"),
       supabase.from("assignments").select("*, courses(name, code)").eq("done", false).order("due_date"),
-      supabase.from("notes").select("*, courses(name)").order("created_at", { ascending: false }).limit(5),
     ]);
     setCourses(c.data || []);
     setLectures(l.data || []);
     setExams(e.data || []);
     setTasks(t.data || []);
     setAssignments(a.data || []);
-    setNotes(n.data || []);
     setLoading(false);
   }, []);
 
@@ -59,7 +56,7 @@ export default function Dashboard() {
         <p className="text-sm text-gray-500">Loading...</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          <Card title="Today's schedule">
+          <Card title="Today's schedule" className="lg:col-span-2">
             {lectures.length === 0 ? (
               <Empty>No lectures today.</Empty>
             ) : (
@@ -121,38 +118,15 @@ export default function Dashboard() {
             )}
           </Card>
 
-          <Card title="Today's tasks">
-            <ItemTable rows={tasks} table="tasks" onChange={load} empty="No tasks due today. Nice." />
-          </Card>
-
-          <Card title="Assignments">
-            <ItemTable rows={assignments} table="assignments" onChange={load} empty="No open assignments." />
-          </Card>
-
-          <Card title="Latest notes">
-            {notes.length === 0 ? (
-              <Empty>No notes yet. Use + Add, then Note.</Empty>
-            ) : (
-              <ul className="divide-y divide-gray-100">
-                {notes.map((n) => (
-                  <li key={n.id} className="flex items-start justify-between gap-3 py-2 text-sm">
-                    <div>
-                      <p className="font-medium">{n.title}</p>
-                      {n.content && <p className="whitespace-pre-wrap text-gray-600">{n.content}</p>}
-                      {n.courses?.name && <p className="text-xs text-gray-400">{n.courses.name}</p>}
-                    </div>
-                    <button
-                      className="link-danger"
-                      onClick={async () => {
-                        if (await removeRow("notes", n.id)) load();
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <Card title="Work to complete" className="lg:col-span-2">
+            <Tabs defaultValue="tasks">
+              <TabsList className="mb-4">
+                <TabsTrigger value="tasks">Today&apos;s tasks ({tasks.length})</TabsTrigger>
+                <TabsTrigger value="assignments">Assignments ({assignments.length})</TabsTrigger>
+              </TabsList>
+              <TabsContent value="tasks"><ItemTable rows={tasks} table="tasks" onChange={load} empty="No tasks due today. Nice." /></TabsContent>
+              <TabsContent value="assignments"><ItemTable rows={assignments} table="assignments" onChange={load} empty="No open assignments." /></TabsContent>
+            </Tabs>
           </Card>
         </div>
       )}

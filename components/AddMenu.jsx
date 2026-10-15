@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import AddModal from "./AddModal";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const LABELS = {
   note: "Note",
@@ -17,33 +20,25 @@ export default function AddMenu({
   defaultCourseId = "",
   items = ["note", "topic", "assignment", "task"],
 }) {
-  const [open, setOpen] = useState(false);
   const [type, setType] = useState(null);
 
   return (
-    <div className="relative">
-      <button className="btn-primary" onClick={() => setOpen(!open)}>
-        + Add
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-40 mt-1 w-44 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
+    <div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild><Button><Plus className="h-4 w-4" /> Add</Button></DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
             {items.map((t) => (
-              <button
+              <DropdownMenuItem
                 key={t}
-                className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
                 onClick={() => {
                   setType(t);
-                  setOpen(false);
                 }}
               >
-                + {LABELS[t]}
-              </button>
+                <Plus className="h-4 w-4" /> {LABELS[t]}
+              </DropdownMenuItem>
             ))}
-          </div>
-        </>
-      )}
+        </DropdownMenuContent>
+      </DropdownMenu>
       {type && (
         <AddModal
           type={type}

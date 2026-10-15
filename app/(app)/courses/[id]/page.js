@@ -7,8 +7,12 @@ import { supabase } from "@/lib/supabase";
 import { fmtDate, linkType, sortItems } from "@/lib/helpers";
 import { removeRow, toggleDone } from "@/lib/db";
 import { Card, Empty, PageHeader } from "@/components/ui";
-import AddMenu from "@/components/AddMenu";
 import ItemTable from "@/components/ItemTable";
+import EditCourseModal from "@/components/EditCourseModal";
+import AddModal from "@/components/AddModal";
+import { Pencil, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function CourseDetail() {
   const { id } = useParams();
@@ -20,6 +24,8 @@ export default function CourseDetail() {
   const [materials, setMaterials] = useState([]);
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [adding, setAdding] = useState(null);
 
   const load = useCallback(async () => {
     const [c, tp, t, a, m, n] = await Promise.all([
@@ -59,6 +65,12 @@ export default function CourseDetail() {
     ...tasks.filter((t) => t.done).map((t) => ({ ...t, _table: "tasks", _label: "Task" })),
     ...assignments.filter((a) => a.done).map((a) => ({ ...a, _table: "assignments", _label: "Assignment" })),
   ];
+  const topicsByDay = topics.reduce((groups, topic) => {
+    const day = topic.created_at.slice(0, 10);
+    if (!groups[day]) groups[day] = [];
+    groups[day].push(topic);
+    return groups;
+  }, {});
 
   async function deleteCourse() {
     const ok = await removeRow(
@@ -75,45 +87,53 @@ export default function CourseDetail() {
         Back to courses
       </Link>
       <PageHeader title={course.name}>
-        <AddMenu
-          courses={[course]}
-          defaultCourseId={course.id}
-          onSaved={load}
-          items={["topic", "task", "assignment", "note", "material"]}
-        />
+        <button className="btn" onClick={() => setEditing(true)}><Pencil className="mr-2 h-4 w-4" />Edit course</button>
         <button className="btn" onClick={deleteCourse}>Delete course</button>
       </PageHeader>
       <p className="-mt-4 mb-6 text-sm text-gray-500">
         {[course.code, course.professor].filter(Boolean).join(", ")}
       </p>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Recent topics">
+      <Tabs defaultValue="topics" className="w-full">
+        <div className="mb-5 overflow-x-auto pb-1">
+          <TabsList className="h-auto min-w-max gap-1 bg-muted/70 p-1.5">
+            <TabsTrigger value="topics">Topics <span className="ml-1 text-xs text-muted-foreground">{topics.length}</span></TabsTrigger>
+            <TabsTrigger value="materials">Materials <span className="ml-1 text-xs text-muted-foreground">{materials.length}</span></TabsTrigger>
+            <TabsTrigger value="tasks">Tasks <span className="ml-1 text-xs text-muted-foreground">{openTasks.length}</span></TabsTrigger>
+            <TabsTrigger value="assignments">Assignments <span className="ml-1 text-xs text-muted-foreground">{openAssignments.length}</span></TabsTrigger>
+            <TabsTrigger value="completed">Completed <span className="ml-1 text-xs text-muted-foreground">{completed.length}</span></TabsTrigger>
+            <TabsTrigger value="notes">Notes <span className="ml-1 text-xs text-muted-foreground">{notes.length}</span></TabsTrigger>
+          </TabsList>
+        </div>
+        <TabsContent value="topics">
+        <Card title="Recent topics" action={<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Add topic" onClick={() => setAdding("topic")}><Plus className="h-4 w-4" /></Button>}>
           {topics.length === 0 ? (
             <Empty>No topics yet. Use + Add, then Recent Topic.</Empty>
           ) : (
-            <ul className="divide-y divide-gray-100">
-              {topics.map((t) => (
-                <li key={t.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                  <span>{t.title}</span>
-                  <span className="flex items-center gap-3">
-                    <span className="text-xs text-gray-400">{fmtDate(t.created_at.slice(0, 10))}</span>
-                    <button
-                      className="link-danger"
-                      onClick={async () => {
-                        if (await removeRow("topics", t.id)) load();
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </span>
-                </li>
+            <div className="space-y-3">
+              {Object.entries(topicsByDay).map(([day, dayTopics], index) => (
+                <details key={day} open={index === 0} className="group overflow-hidden rounded-lg border bg-muted/20">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:content-none hover:bg-muted/50">
+                    <span className="flex items-center gap-3"><span className="text-primary transition-transform group-open:rotate-90">›</span><span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{fmtDate(day)}</span></span>
+                    <span className="text-xs font-medium text-muted-foreground">{dayTopics.length} {dayTopics.length === 1 ? "topic" : "topics"}</span>
+                  </summary>
+                  <ul className="divide-y border-t bg-card">
+                    {dayTopics.map((topic) => (
+                      <li key={topic.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                        <span className="font-medium">{topic.title}</span>
+                        <button className="link-danger" onClick={async () => { if (await removeRow("topics", topic.id)) load(); }}>Delete</button>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
               ))}
-            </ul>
+            </div>
           )}
         </Card>
+        </TabsContent>
 
-        <Card title="Course materials">
+        <TabsContent value="materials">
+        <Card title="Course materials" action={<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Add material" onClick={() => setAdding("material")}><Plus className="h-4 w-4" /></Button>}>
           {materials.length === 0 ? (
             <Empty>No links yet. Add YouTube, Drive or any link with + Add.</Empty>
           ) : (
@@ -139,15 +159,21 @@ export default function CourseDetail() {
             </ul>
           )}
         </Card>
+        </TabsContent>
 
-        <Card title="Tasks">
+        <TabsContent value="tasks">
+        <Card title="Tasks" action={<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Add task" onClick={() => setAdding("task")}><Plus className="h-4 w-4" /></Button>}>
           <ItemTable rows={openTasks} table="tasks" onChange={load} hideCourse empty="No open tasks." />
         </Card>
+        </TabsContent>
 
-        <Card title="Assignments">
+        <TabsContent value="assignments">
+        <Card title="Assignments" action={<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Add assignment" onClick={() => setAdding("assignment")}><Plus className="h-4 w-4" /></Button>}>
           <ItemTable rows={openAssignments} table="assignments" onChange={load} hideCourse empty="No open assignments." />
         </Card>
+        </TabsContent>
 
+        <TabsContent value="completed">
         <Card title="Completed">
           {completed.length === 0 ? (
             <Empty>Finished tasks and assignments show up here.</Empty>
@@ -171,8 +197,10 @@ export default function CourseDetail() {
             </ul>
           )}
         </Card>
+        </TabsContent>
 
-        <Card title="Notes">
+        <TabsContent value="notes">
+        <Card title="Notes" action={<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Add note" onClick={() => setAdding("note")}><Plus className="h-4 w-4" /></Button>}>
           {notes.length === 0 ? (
             <Empty>No notes for this course.</Empty>
           ) : (
@@ -196,7 +224,10 @@ export default function CourseDetail() {
             </ul>
           )}
         </Card>
-      </div>
+        </TabsContent>
+      </Tabs>
+      {editing && <EditCourseModal course={course} onClose={() => setEditing(false)} onSaved={load} />}
+      {adding && <AddModal type={adding} courses={[course]} defaultCourseId={course.id} onClose={() => setAdding(null)} onSaved={load} />}
     </div>
   );
 }

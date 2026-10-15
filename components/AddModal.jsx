@@ -24,7 +24,7 @@ const FORMS = {
       { name: "name", label: "Course name", type: "text", required: true },
       { name: "code", label: "Code (e.g. CS101)", type: "text" },
       { name: "professor", label: "Professor", type: "text" },
-      { name: "color", label: "Color", type: "color", default: "#0f766e" },
+      { name: "color", label: "Color", type: "color", default: "#c8102e" },
     ],
   },
   note: {

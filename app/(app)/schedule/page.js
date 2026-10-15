@@ -46,7 +46,7 @@ export default function SchedulePage() {
         <div className="space-y-4">
           <Card title="Week schedule">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[680px] overflow-hidden rounded-lg border text-sm">
                 <thead>
                   <tr>
                     <th className="th">Day</th>
@@ -61,10 +61,10 @@ export default function SchedulePage() {
                   {DAY_ORDER.map((d) => {
                     const rows = lectures.filter((l) => l.day_of_week === d);
                     const isToday = d === todayDow;
-                    const dayCls = "py-2 pr-3 align-top font-medium " + (isToday ? "text-accent" : "text-ink");
+                    const dayCls = "py-2 pr-3 align-top font-medium " + (isToday ? "text-primary" : "text-foreground");
                     if (rows.length === 0) {
                       return (
-                        <tr key={d} className="border-t border-gray-100">
+                        <tr key={d} className="border-t bg-card hover:bg-muted/30">
                           <td className={dayCls}>{DAY_NAMES[d]}</td>
                           <td colSpan={5} className="py-2 text-gray-400">No classes</td>
                         </tr>
@@ -73,7 +73,7 @@ export default function SchedulePage() {
                     return (
                       <Fragment key={d}>
                         {rows.map((l, idx) => (
-                          <tr key={l.id} className={idx === 0 ? "border-t border-gray-100" : ""}>
+                          <tr key={l.id} className={(idx === 0 ? "border-t " : "") + "bg-card transition-colors hover:bg-muted/30"}>
                             <td className={dayCls}>{idx === 0 ? DAY_NAMES[d] : ""}</td>
                             <td className="whitespace-nowrap py-2 pr-3">
                               {fmtTime(l.start_time)}
@@ -107,7 +107,7 @@ export default function SchedulePage() {
               <Empty>No exams added yet.</Empty>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <table className="w-full min-w-[620px] overflow-hidden rounded-lg border text-sm">
                   <thead>
                     <tr>
                       <th className="th">Date</th>
@@ -119,7 +119,7 @@ export default function SchedulePage() {
                   </thead>
                   <tbody>
                     {exams.map((x) => (
-                      <tr key={x.id} className={"border-t border-gray-100 " + (x.exam_date < today ? "text-gray-400" : "")}>
+                      <tr key={x.id} className={"border-t bg-card transition-colors hover:bg-muted/30 " + (x.exam_date < today ? "text-muted-foreground" : "")}>
                         <td className="whitespace-nowrap py-2 pr-3">{fmtDate(x.exam_date)}</td>
                         <td className="py-2 pr-3">{fmtTime(x.exam_time) || "-"}</td>
                         <td className="py-2 pr-3">{x.courses?.name}</td>

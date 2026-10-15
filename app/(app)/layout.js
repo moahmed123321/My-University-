@@ -21,12 +21,12 @@ export default function AppLayout({ children }) {
     return () => sub.subscription.unsubscribe();
   }, [router]);
 
-  if (!ready) return <div className="p-8 text-sm text-gray-500">Loading...</div>;
+  if (!ready) return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Loading your workspace...</div>;
 
   return (
-    <div className="min-h-screen md:flex">
+    <div className="min-h-screen bg-muted/30 md:flex">
       <Sidebar />
-      <main className="min-w-0 flex-1 p-4 pb-24 md:p-8">{children}</main>
+      <main className="min-w-0 flex-1 p-5 pb-24 sm:p-8 md:pb-8"><div className="mx-auto max-w-7xl">{children}</div></main>
     </div>
   );
 }
