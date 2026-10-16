@@ -22,11 +22,10 @@ const ASSIGNMENTS = {
 // Tables used by the new "Add ..." forms (rename to match your database).
 const TOPICS = {
   table: "topics",
-  name: "name",
+  name: "title",
   course: "course_id",
-  date: "studied_on",
 };
-const NOTES = { table: "notes", name: "name", course: "course_id" };
+const NOTES = { table: "notes", name: "title", course: "course_id" };
 const NEW_ASSIGN_COURSE_COL = "course_id"; // course column on the assignments table
 const SCHEDULE_HREF = "/schedule";
 const TASKS_HREF = "/tasks";
@@ -212,8 +211,6 @@ function QuickAdd({ onPick }) {
           {[
             ["note", "Add Note"],
             ["assignment", "Add Assignment"],
-            ["lecture", "Add Lecture"],
-            ["exam", "Add Exam"],
           ].map(([k, label]) => (
             <button
               key={k}
@@ -514,7 +511,6 @@ function QuickModal({
         data: {
           [TOPICS.name]: name.trim(),
           [TOPICS.course]: course,
-          [TOPICS.date]: date || todayIso,
         },
       };
     else if (type === "note")
@@ -599,9 +595,9 @@ function QuickModal({
               ) : null}
             </label>
 
-            {type !== "note" && (
+            {type === "assignment" && (
               <label className="block space-y-1.5 text-sm font-medium">
-                {type === "topic" ? "Date studied" : "Due date"}
+                Due date
                 <input
                   type="date"
                   className="input"

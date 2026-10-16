@@ -162,13 +162,13 @@ export default function CourseDetail() {
         </TabsContent>
 
         <TabsContent value="tasks">
-        <Card title="Tasks" action={<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Add task" onClick={() => setAdding("task")}><Plus className="h-4 w-4" /></Button>}>
+        <Card title="Tasks">
           <ItemTable rows={openTasks} table="tasks" onChange={load} hideCourse empty="No open tasks." />
         </Card>
         </TabsContent>
 
         <TabsContent value="assignments">
-        <Card title="Assignments" action={<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Add assignment" onClick={() => setAdding("assignment")}><Plus className="h-4 w-4" /></Button>}>
+        <Card title="Assignments">
           <ItemTable rows={openAssignments} table="assignments" onChange={load} hideCourse empty="No open assignments." />
         </Card>
         </TabsContent>
@@ -200,7 +200,7 @@ export default function CourseDetail() {
         </TabsContent>
 
         <TabsContent value="notes">
-        <Card title="Notes" action={<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Add note" onClick={() => setAdding("note")}><Plus className="h-4 w-4" /></Button>}>
+        <Card title="Notes">
           {notes.length === 0 ? (
             <Empty>No notes for this course.</Empty>
           ) : (

@@ -6,6 +6,19 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* Arabic text in LTR contexts (instructor names, course names) */
+:lang(ar), [dir="auto"] {
+  font-family: "IBM Plex Sans Arabic", "Noto Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Honour reduced-motion at component level */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center rounded-lg border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted;

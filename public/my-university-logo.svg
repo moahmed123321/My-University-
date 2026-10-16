@@ -1,7 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" role="img" aria-labelledby="title">
+<svg 
+  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" role="img" aria-labelledby="title">
   <title id="title">My University</title>
   <defs>
-    <linearGradient id="red" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#df1025"/><stop offset="1" stop-color="#b70016"/></linearGradient>
+    <linearGradient id="red" x1="0" x2="1" y1="0" y2="1">
+      <stop stop-color="#df1025"/>
+      <stop offset="1" stop-color="#b70016"/>
+    </linearGradient>
   </defs>
   <g fill="url(#red)">
     <path d="M35 35c0-13 14-21 25-15l79 44c8 5 18 5 26 0l91-49c11-6 25 2 25 15v22c0 8-4 15-11 19l-112 62c-7 4-16 4-23 0L46 80c-7-4-11-11-11-19z"/>
