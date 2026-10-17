@@ -3,5 +3,14 @@
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 export function ThemeProvider({ children }) {
-  return <NextThemesProvider attribute="class" forcedTheme="light" enableSystem={false}>{children}</NextThemesProvider>;
+  return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="light"
+      enableSystem={true}
+      themes={["light", "dark", "neutral-dark"]}
+    >
+      {children}
+    </NextThemesProvider>
+  );
 }

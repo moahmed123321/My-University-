@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import BrandMark from "@/components/BrandMark";
-import { BookOpen, CalendarDays, ChevronDown, ChevronRight, LayoutDashboard, LogOut, CheckSquare, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { BookOpen, CalendarDays, ChevronDown, ChevronRight, LayoutDashboard, LogOut, CheckSquare, PanelLeftClose, PanelLeftOpen, Settings } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -128,17 +128,35 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <button
-          title={collapsed ? "Sign out" : undefined}
-          onClick={signOut}
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-            collapsed && "justify-center px-2"
-          )}
-        >
-          <LogOut className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Sign out</span>}
-        </button>
+        {/* Bottom actions: Settings (red) above Sign out */}
+        <div className="mt-auto space-y-1 border-t border-border/60 pt-3">
+          <Link
+            href="/settings"
+            title={collapsed ? "Settings" : undefined}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors",
+              collapsed && "justify-center px-2",
+              pathname.startsWith("/settings")
+                ? "bg-red-50 font-semibold text-red-600 shadow-xs ring-1 ring-red-200/80 dark:bg-red-950/40 dark:text-red-400 dark:ring-red-900/40"
+                : "text-red-600 hover:bg-red-50/70 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+            )}
+          >
+            <Settings className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+            {!collapsed && <span className="truncate">Settings</span>}
+          </Link>
+
+          <button
+            title={collapsed ? "Sign out" : undefined}
+            onClick={signOut}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+              collapsed && "justify-center px-2"
+            )}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Sign out</span>}
+          </button>
+        </div>
       </aside>
 
       {/* Mobile bottom bar */}
@@ -156,6 +174,18 @@ export default function Sidebar() {
             </Link>
           );
         })}
+        <Link
+          href="/settings"
+          className={cn(
+            "flex flex-1 flex-col items-center gap-1 py-4 text-center text-xs transition-colors",
+            pathname.startsWith("/settings")
+              ? "font-semibold text-red-600 dark:text-red-400"
+              : "text-red-600/80 hover:text-red-600 dark:text-red-400/80 dark:hover:text-red-400"
+          )}
+        >
+          <Settings className="h-5 w-5" />
+          Settings
+        </Link>
       </nav>
     </>
   );
