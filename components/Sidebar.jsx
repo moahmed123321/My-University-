@@ -166,20 +166,20 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* Bottom actions: Settings (red) above Sign out */}
+        {/* Bottom actions: Settings (standard) above Sign out (red) */}
         <div className="mt-auto space-y-1 border-t border-border/60 pt-3">
           <Link
             href="/settings"
             title={collapsed ? "Settings" : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors",
-              collapsed && "justify-center px-2",
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
               pathname.startsWith("/settings")
-                ? "bg-red-50 font-semibold text-red-600 shadow-xs ring-1 ring-red-200/80 dark:bg-red-950/40 dark:text-red-400 dark:ring-red-900/40"
-                : "text-red-600 hover:bg-red-50/70 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                ? "bg-muted font-semibold text-foreground shadow-sm ring-1 ring-border"
+                : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+              collapsed && "justify-center px-2"
             )}
           >
-            <Settings className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+            <Settings className="h-4 w-4 shrink-0" />
             {!collapsed && <span className="truncate">Settings</span>}
           </Link>
 
@@ -187,11 +187,12 @@ export default function Sidebar() {
             title={collapsed ? "Sign out" : undefined}
             onClick={signOut}
             className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors",
+              "text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/40 dark:hover:text-red-300",
               collapsed && "justify-center px-2"
             )}
           >
-            <LogOut className="h-4 w-4 shrink-0" />
+            <LogOut className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
             {!collapsed && <span>Sign out</span>}
           </button>
         </div>
@@ -217,8 +218,8 @@ export default function Sidebar() {
           className={cn(
             "flex flex-1 flex-col items-center gap-1 py-4 text-center text-xs transition-colors",
             pathname.startsWith("/settings")
-              ? "font-semibold text-red-600 dark:text-red-400"
-              : "text-red-600/80 hover:text-red-600 dark:text-red-400/80 dark:hover:text-red-400"
+              ? "font-semibold text-primary"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
           <Settings className="h-5 w-5" />
