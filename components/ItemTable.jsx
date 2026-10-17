@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { FocusButton } from "@/components/PomodoroTimer";
 
 // Table used for both tasks and assignments
 export default function ItemTable({ rows, table, onChange, hideCourse = false, empty = "Nothing here." }) {
@@ -19,6 +20,7 @@ export default function ItemTable({ rows, table, onChange, hideCourse = false, e
             <th className="th">Title</th>
             {!hideCourse && <th className="th">Course</th>}
             <th className="th">Due</th>
+            <th className="th w-24">Focus</th>
             <th className="th w-14"></th>
           </tr>
         </thead>
@@ -39,6 +41,11 @@ export default function ItemTable({ rows, table, onChange, hideCourse = false, e
               <td className="py-3 pr-4 whitespace-nowrap">
                 <DueBadge date={r.due_date} done={r.done} />
               </td>
+              <td className="px-2 py-3">
+                {!r.done && (
+                  <FocusButton taskId={r.id} taskTitle={r.title} table={table} />
+                )}
+              </td>
               <td className="px-2 py-3 text-right">
                 <Button
                   type="button"
@@ -58,3 +65,4 @@ export default function ItemTable({ rows, table, onChange, hideCourse = false, e
     </div>
   );
 }
+

@@ -10,7 +10,7 @@ import { Card, Empty, PageHeader } from "@/components/ui";
 import ItemTable from "@/components/ItemTable";
 import EditCourseModal from "@/components/EditCourseModal";
 import AddModal from "@/components/AddModal";
-import { Pencil, Plus } from "lucide-react";
+import { ArrowLeft, BookOpen, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -18,6 +18,7 @@ export default function CourseDetail() {
   const { id } = useParams();
   const router = useRouter();
   const [course, setCourse] = useState(null);
+  const [view, setView] = useState("overview"); // "overview" | "notes"
   const [topics, setTopics] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -81,12 +82,71 @@ export default function CourseDetail() {
     if (ok) router.replace("/courses");
   }
 
+  const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const sbKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  const notesSrc = `/notes.html?courseId=${course.id}&courseName=${encodeURIComponent(course.name)}&sbUrl=${encodeURIComponent(sbUrl)}&sbKey=${encodeURIComponent(sbKey)}`;
+
+  if (view === "notes") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setView("overview")}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to course details</span>
+          </button>
+          <Link
+            href="/courses"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            All courses
+          </Link>
+        </div>
+
+        <PageHeader title={`${course.name} · Notes`}>
+          <Button variant="outline" onClick={() => setView("overview")}>
+            Course Overview
+          </Button>
+          <button className="btn" onClick={() => setEditing(true)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit course
+          </button>
+        </PageHeader>
+        <p className="-mt-4 text-sm text-muted-foreground">
+          {[course.code, course.professor].filter(Boolean).join(", ")}
+        </p>
+
+        {/* Embedded notes workspace on same page with sidebar and course name */}
+        <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          <iframe
+            src={notesSrc}
+            className="h-[calc(100vh-210px)] min-h-[660px] w-full border-0"
+            title={`${course.name} Notes`}
+          />
+        </div>
+
+        {editing && <EditCourseModal course={course} onClose={() => setEditing(false)} onSaved={load} />}
+      </div>
+    );
+  }
+
   return (
     <div>
       <Link href="/courses" className="mb-2 inline-block text-sm text-gray-500 hover:text-gray-800">
         Back to courses
       </Link>
       <PageHeader title={course.name}>
+        <button
+          type="button"
+          onClick={() => setView("notes")}
+          className="btn-primary inline-flex items-center gap-1.5"
+        >
+          <BookOpen className="h-4 w-4" />
+          Open this note in main
+        </button>
         <button className="btn" onClick={() => setEditing(true)}><Pencil className="mr-2 h-4 w-4" />Edit course</button>
         <button className="btn" onClick={deleteCourse}>Delete course</button>
       </PageHeader>
@@ -200,30 +260,26 @@ export default function CourseDetail() {
         </TabsContent>
 
         <TabsContent value="notes">
-        <Card title="Notes">
-          {notes.length === 0 ? (
-            <Empty>No notes for this course.</Empty>
-          ) : (
-            <ul className="divide-y divide-gray-100">
-              {notes.map((n) => (
-                <li key={n.id} className="flex items-start justify-between gap-3 py-2 text-sm">
-                  <div>
-                    <p className="font-medium">{n.title}</p>
-                    {n.content && <p className="whitespace-pre-wrap text-gray-600">{n.content}</p>}
-                  </div>
-                  <button
-                    className="link-danger"
-                    onClick={async () => {
-                      if (await removeRow("notes", n.id)) load();
-                    }}
-                  >
-                    Delete
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4 shadow-xs">
+              <div>
+                <h3 className="text-base font-semibold">Course Notes & Canvas</h3>
+                <p className="text-xs text-muted-foreground">Text editor with [[ linking, pannable canvas, and folder explorer.</p>
+              </div>
+              <Button onClick={() => setView("notes")} className="gap-1.5">
+                <BookOpen className="h-4 w-4" />
+                Open this note in main
+              </Button>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+              <iframe
+                src={notesSrc}
+                className="h-[620px] w-full border-0"
+                title={`${course.name} Notes`}
+              />
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
       {editing && <EditCourseModal course={course} onClose={() => setEditing(false)} onSaved={load} />}

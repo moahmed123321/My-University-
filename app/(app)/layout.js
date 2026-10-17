@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/Sidebar";
+import { PomodoroProvider } from "@/components/PomodoroContext";
+import { FloatingPomodoro } from "@/components/PomodoroTimer";
 
 // Every page inside (app) needs a logged-in user. Otherwise go to /login.
 export default function AppLayout({ children }) {
@@ -24,9 +26,12 @@ export default function AppLayout({ children }) {
   if (!ready) return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Loading your workspace...</div>;
 
   return (
-    <div className="min-h-screen bg-muted/30 md:flex">
-      <Sidebar />
-      <main className="min-w-0 flex-1 p-5 pb-24 sm:p-8 md:pb-8"><div className="mx-auto max-w-7xl">{children}</div></main>
-    </div>
+    <PomodoroProvider>
+      <div className="min-h-screen bg-muted/30 md:flex">
+        <Sidebar />
+        <main className="min-w-0 flex-1 p-5 pb-24 sm:p-8 md:pb-8"><div className="mx-auto max-w-7xl">{children}</div></main>
+      </div>
+      <FloatingPomodoro />
+    </PomodoroProvider>
   );
 }

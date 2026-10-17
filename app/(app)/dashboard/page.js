@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { DAY_NAMES, DAY_ORDER, fmtTime } from "@/lib/helpers";
 import AddModal from "@/components/AddModal";
+import { FocusButton } from "@/components/PomodoroTimer";
 
 /* ------------------------------------------------------------------ *
  * CONFIG: Learning + Assignments cards.
@@ -931,7 +932,11 @@ export default function OverviewPage() {
                     done={!!t[TASKS.done]}
                     title={t[TASKS.title]}
                     onToggle={() => toggle(TASKS, tasks, setTasks, t)}
-                  />
+                  >
+                    {!t[TASKS.done] && (
+                      <FocusButton taskId={t.id} taskTitle={t[TASKS.title]} table={TASKS.table} />
+                    )}
+                  </CheckRow>
                 ))
               )}
             </section>
@@ -955,6 +960,9 @@ export default function OverviewPage() {
                     title={a[ASSIGNMENTS.title]}
                     onToggle={() => toggle(ASSIGNMENTS, assigns, setAssigns, a)}
                   >
+                    {!a[ASSIGNMENTS.done] && (
+                      <FocusButton taskId={a.id} taskTitle={a[ASSIGNMENTS.title]} table={ASSIGNMENTS.table} />
+                    )}
                     <DuePill
                       iso={a[ASSIGNMENTS.due]}
                       done={!!a[ASSIGNMENTS.done]}

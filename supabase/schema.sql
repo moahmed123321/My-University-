@@ -87,3 +87,20 @@ begin
     execute format('create policy "own rows" on %I for all using (user_id = auth.uid()) with check (user_id = auth.uid())', t);
   end loop;
 end $$;
+
+-- Course Notes, Canvases, and Folders (hierarchical notes module)
+create table if not exists course_notes (
+  id text primary key,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  course_id uuid not null references courses(id) on delete cascade,
+  parent_id text references course_notes(id) on delete cascade,
+  type text not null check (type in ('note', 'canvas', 'folder')),
+  title text not null default 'Untitled',
+  content text default '',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table course_notes enable row level security;
+create policy "own rows on course_notes" on course_notes for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+

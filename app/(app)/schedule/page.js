@@ -6,6 +6,8 @@ import { DAY_NAMES, DAY_ORDER, fmtTime, fmtDate, isoDate } from "@/lib/helpers";
 import { removeRow } from "@/lib/db";
 import { Empty } from "@/components/ui";
 import AddModal from "@/components/AddModal";
+import { CalendarDays, Clock, Columns, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /* ---------- design tokens (taken from the My University app) ---------- */
 const BRAND = "#832021";
@@ -198,6 +200,7 @@ export default function SchedulePage() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null); // "lecture" | "exam" | null
   const [tab, setTab] = useState("week"); // "week" | "exams"
+  const [gridOrientation, setGridOrientation] = useState("periods"); // "periods" (P1 above) | "days" (Days above)
 
   const load = useCallback(async () => {
     const [c, l, e] = await Promise.all([
@@ -307,7 +310,39 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      <Tabs value={tab} onChange={changeTab} />
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <Tabs value={tab} onChange={changeTab} />
+        {tab === "week" && slots.length > 0 && (
+          <div className="flex items-center gap-1 rounded-xl border bg-card p-1 shadow-xs">
+            <button
+              type="button"
+              onClick={() => setGridOrientation("periods")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                gridOrientation === "periods"
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <Columns className="h-3.5 w-3.5" />
+              <span>Periods above (P1, P2...)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setGridOrientation("days")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                gridOrientation === "days"
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              <span>Days above</span>
+            </button>
+          </div>
+        )}
+      </div>
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
@@ -321,88 +356,190 @@ export default function SchedulePage() {
         ) : (
           <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[960px] border-separate border-spacing-0 text-sm">
-                <thead>
-                  <tr>
-                    <th className="sticky top-0 border-b bg-card px-4 py-2.5 text-start text-[13px] font-semibold text-muted-foreground">
-                      <span className="inline-flex items-center gap-1.5">
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                        >
-                          <circle cx="12" cy="12" r="9" />
-                          <path d="M12 7v5l3 2" />
-                        </svg>
-                        Time
-                      </span>
-                    </th>
-                    {DAY_ORDER.map((d) => (
-                      <th
-                        key={d}
-                        className={
-                          "sticky top-0 border-b bg-card px-2.5 py-2.5 text-start text-[13px] font-semibold " +
-                          (d === todayDow
-                            ? "text-primary"
-                            : "text-muted-foreground")
-                        }
-                        style={
-                          d === todayDow
-                            ? { boxShadow: `inset 0 -2px 0 ${BRAND}` }
-                            : undefined
-                        }
-                      >
-                        {DAY_NAMES[d]}
+              {gridOrientation === "periods" ? (
+                /* Periods on top (P1, P2...) — Days in rows */
+                <table className="w-full min-w-[800px] border-separate border-spacing-0 text-sm">
+                  <thead>
+                    <tr>
+                      <th className="sticky left-0 top-0 z-20 border-b border-r bg-card px-4 py-3 text-start text-[13px] font-semibold text-muted-foreground shadow-xs min-w-[140px]">
+                        <span className="inline-flex items-center gap-1.5">
+                          <CalendarDays className="h-4 w-4 text-primary" />
+                          Day / Period
+                        </span>
                       </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {slots.map((s) => (
-                    <tr key={s.key}>
-                      <td className="whitespace-nowrap border-b px-4 py-3 align-middle text-[13px] font-semibold text-muted-foreground">
-                        <span>{fmtTime(s.start)}</span>
-                        {s.end ? (
-                          <>
-                            <i className="mx-1 not-italic">–</i>
-                            <span>{fmtTime(s.end)}</span>
-                          </>
-                        ) : null}
-                      </td>
-                      {DAY_ORDER.map((d) => {
-                        const rows = lectures.filter(
-                          (l) =>
-                            l.day_of_week === d &&
-                            `${l.start_time}|${l.end_time || ""}` === s.key,
-                        );
-                        return (
-                          <td
-                            key={d}
-                            className="min-w-[120px] border-b px-2.5 py-2 align-top"
-                            style={
-                              d === todayDow
-                                ? { background: mix(BRAND, 4) }
-                                : undefined
-                            }
-                          >
-                            {rows.map((l) => (
-                              <EventBlock
-                                key={l.id}
-                                l={l}
-                                onDelete={() => del("lectures", l.id)}
-                              />
-                            ))}
-                          </td>
-                        );
-                      })}
+                      {slots.map((s, idx) => (
+                        <th
+                          key={s.key}
+                          className="sticky top-0 z-10 border-b bg-card px-3.5 py-3 text-start text-[13px] font-semibold text-foreground min-w-[170px]"
+                        >
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="inline-flex h-5 items-center justify-center rounded-md bg-primary/10 px-2 text-xs font-bold text-primary">
+                                P{idx + 1}
+                              </span>
+                              <span className="text-xs font-bold text-foreground">
+                                Period {idx + 1}
+                              </span>
+                            </div>
+                            <div className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground tabular-nums">
+                              <Clock className="h-3 w-3 text-muted-foreground/70" />
+                              <span>{fmtTime(s.start)}</span>
+                              {s.end ? (
+                                <>
+                                  <span className="text-muted-foreground/50">–</span>
+                                  <span>{fmtTime(s.end)}</span>
+                                </>
+                              ) : null}
+                            </div>
+                          </div>
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {DAY_ORDER.map((d) => (
+                      <tr
+                        key={d}
+                        className={cn(
+                          "transition-colors",
+                          d === todayDow ? "bg-primary/[0.03]" : "hover:bg-muted/30"
+                        )}
+                      >
+                        <td
+                          className={cn(
+                            "sticky left-0 z-10 whitespace-nowrap border-b border-r bg-card px-4 py-3.5 align-middle shadow-xs",
+                            d === todayDow && "!bg-primary/5"
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span
+                              className={cn(
+                                "text-sm font-semibold",
+                                d === todayDow ? "font-bold text-primary" : "text-foreground"
+                              )}
+                            >
+                              {DAY_NAMES[d]}
+                            </span>
+                            {d === todayDow && (
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                                Today
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        {slots.map((s) => {
+                          const rows = lectures.filter(
+                            (l) =>
+                              l.day_of_week === d &&
+                              `${l.start_time}|${l.end_time || ""}` === s.key,
+                          );
+                          return (
+                            <td
+                              key={s.key}
+                              className={cn(
+                                "min-w-[170px] border-b border-border/60 px-2.5 py-2.5 align-top transition-colors",
+                                d === todayDow && "bg-primary/[0.015]"
+                              )}
+                            >
+                              {rows.length > 0 ? (
+                                rows.map((l) => (
+                                  <EventBlock
+                                    key={l.id}
+                                    l={l}
+                                    onDelete={() => del("lectures", l.id)}
+                                  />
+                                ))
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setModal("lecture")}
+                                  className="group flex h-full min-h-[44px] w-full items-center justify-center rounded-lg border border-dashed border-transparent transition-all hover:border-border hover:bg-muted/30"
+                                  title={`Add schedule for ${DAY_NAMES[d]}`}
+                                >
+                                  <Plus className="h-3.5 w-3.5 text-muted-foreground/30 transition-colors group-hover:text-muted-foreground" />
+                                </button>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                /* Days on top — Time in rows (original) */
+                <table className="w-full min-w-[960px] border-separate border-spacing-0 text-sm">
+                  <thead>
+                    <tr>
+                      <th className="sticky top-0 border-b bg-card px-4 py-2.5 text-start text-[13px] font-semibold text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" />
+                          Time
+                        </span>
+                      </th>
+                      {DAY_ORDER.map((d) => (
+                        <th
+                          key={d}
+                          className={
+                            "sticky top-0 border-b bg-card px-2.5 py-2.5 text-start text-[13px] font-semibold " +
+                            (d === todayDow
+                              ? "text-primary"
+                              : "text-muted-foreground")
+                          }
+                          style={
+                            d === todayDow
+                              ? { boxShadow: `inset 0 -2px 0 ${BRAND}` }
+                              : undefined
+                          }
+                        >
+                          {DAY_NAMES[d]}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {slots.map((s) => (
+                      <tr key={s.key}>
+                        <td className="whitespace-nowrap border-b px-4 py-3 align-middle text-[13px] font-semibold text-muted-foreground">
+                          <span>{fmtTime(s.start)}</span>
+                          {s.end ? (
+                            <>
+                              <i className="mx-1 not-italic">–</i>
+                              <span>{fmtTime(s.end)}</span>
+                            </>
+                          ) : null}
+                        </td>
+                        {DAY_ORDER.map((d) => {
+                          const rows = lectures.filter(
+                            (l) =>
+                              l.day_of_week === d &&
+                              `${l.start_time}|${l.end_time || ""}` === s.key,
+                          );
+                          return (
+                            <td
+                              key={d}
+                              className="min-w-[120px] border-b px-2.5 py-2 align-top"
+                              style={
+                                d === todayDow
+                                  ? { background: mix(BRAND, 4) }
+                                  : undefined
+                              }
+                            >
+                              {rows.map((l) => (
+                                <EventBlock
+                                  key={l.id}
+                                  l={l}
+                                  onDelete={() => del("lectures", l.id)}
+                                />
+                              ))}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         )

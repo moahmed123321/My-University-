@@ -32,6 +32,11 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap"
           rel="stylesheet"
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem("theme");if(t&&t.indexOf(" ")!==-1){localStorage.setItem("theme",t.includes("neutral")?"neutral-dark":"light");}}catch(e){}`,
+          }}
+        />
       </head>
       <body>
         <ThemeProvider>{children}<Toaster /></ThemeProvider>

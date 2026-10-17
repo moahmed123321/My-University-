@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Course Notes</title>
+  <style>
+    /* ─── CSS Variables & Themes ─── */
+    :root {
+      --bg: #ffffff;
+      --surface: #f8fafc;
+      --surface-hover: #f1f5f9;
+      --surface-border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --primary: #c8102e;
+      --primary-hover: #a80c25;
+      --primary-tint: rgba(200, 16, 46, 0.08);
+      --success: #16a34a;
+      --card-bg: #ffffff;
+      --card-border: #cbd5e1;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    html.dark {
+      --bg: #090d16;
+      --surface: #111827;
+      --surface-hover: #1f2937;
+      --surface-border: #283548;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #ef4444;
+      --primary-hover: #dc2626;
+      --primary-tint: rgba(239, 68, 68, 0.12);
+      --success: #22c55e;
+      --card-bg: #151e32;
+      --card-border: #2e3e5c;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: var(--font);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      font-size: 14px;
+    }
+
+    /* ─── Layout: Sidebar & Main Area ─── */
+    #sidebar {
+      width: 290px;
+      min-width: 250px;
+      background: var(--surface);
+      border-inline-end: 1px solid var(--surface-border);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      user-select: none;
+    }
+
+    #main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: var(--bg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ─── Sidebar Header & Controls ─── */
+    .sidebar-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--surface-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .course-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .icon-btn {
+      background: none;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 6px;
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .icon-btn:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+      border-color: var(--surface-border);
+    }
+
+    /* ─── Feature 4: Search Bar ─── */
+    .search-box {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--surface-border);
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      padding: 7px 10px 7px 32px;
+      color: var(--text);
+      font-size: 12.5px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    html[dir="rtl"] .search-input {
+      padding: 7px 32px 7px 10px;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+    }
+
+    .search-icon {
+      position: absolute;
+      inset-inline-start: 22px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    /* ─── Toolbar: Create Buttons ─── */
+    .tree-actions {
+      display: flex;
+      gap: 4px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--surface-border);
+    }
+
+    .action-btn {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 6px 8px;
+      font-size: 11.5px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid var(--surface-border);
+      background: var(--bg);
+      color: var(--text);
+      transition: all 0.15s;
+    }
+
+    .action-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--text-muted);
+    }
+
+    /* ─── Feature 3: Folders & Tree Explorer ─── */
+    .tree-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 6px;
+    }
+
+    .tree-item {
+      display: flex;
+      align-items: center;
+      padding: 5px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 13px;
+      position: relative;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .tree-item:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+
+    .tree-item.active {
+      background: var(--primary-tint);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .tree-item .toggle-arrow {
+      width: 14px;
+      height: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .tree-item.collapsed .toggle-arrow {
+      transform: rotate(-90deg);
+    }
+
+    html[dir="rtl"] .tree-item.collapsed .toggle-arrow {
+      transform: rotate(90deg);
+    }
+
+    .tree-item .item-title {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-menu-btn {
+      opacity: 0;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    .tree-item:hover .item-menu-btn {
+      opacity: 1;
+    }
+
+    .item-menu-btn:hover {
+      background: var(--surface-border);
+      color: var(--text);
+    }
+
+    .tree-children {
+      margin-inline-start: 16px;
+      border-inline-start: 1px dashed var(--surface-border);
+      padding-inline-start: 4px;
+    }
+
+    .tree-children.hidden {
+      display: none;
+    }
+
+    /* ─── Feature 1: Text Editor ─── */
+    #editor-view {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      padding: 24px 36px;
+      overflow-y: auto;
+    }
+
+    .editor-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--surface-border);
+    }
+
+    .save-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .save-indicator.saved {
+      color: var(--success);
+    }
+
+    .word-count {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .editor-title {
+      font-size: 26px;
+      font-weight: 800;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text);
+      width: 100%;
+      margin-bottom: 16px;
+    }
+
+    .editor-body {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text);
+      min-height: 400px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .page-link {
+      color: var(--primary);
+      background: var(--primary-tint);
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-decoration: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .page-link:hover {
+      text-decoration: underline;
+    }
+
+    /* [[ Link Picker Popup */
+    #link-picker {
+      position: absolute;
+      z-index: 100;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      width: 240px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+      padding: 4px;
+    }
+
+    .link-picker-item {
+      padding: 6px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12.5px;
+      color: var(--text);
+    }
+
+    .link-picker-item:hover, .link-picker-item.selected {
+      background: var(--primary-tint);
+      color: var(--primary);
+    }
+
+    /* ─── Feature 2: Canvas Board ─── */
+    #canvas-view {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      background-color: var(--bg);
+      background-image: radial-gradient(var(--surface-border) 1px, transparent 1px);
+      background-size: 22px 22px;
+    }
+
+    .canvas-toolbar {
+      position: absolute;
+      top: 14px;
+      inset-inline-start: 14px;
+      z-index: 20;
+      display: flex;
+      gap: 6px;
+      background: var(--surface);
+      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--surface-border);
+      box-shadow: var(--shadow);
+    }
+
+    .canvas-viewport {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      position: relative;
+      transform-origin: 0 0;
+    }
+
+    .canvas-viewport.panning {
+      cursor: grabbing;
+    }
+
+    .canvas-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
+      z-index: 5;
+    }
+
+    .canvas-node {
+      position: absolute;
+      min-width: 160px;
+      max-width: 320px;
+      border-radius: 10px;
+      border: 2px solid var(--card-border);
+      background: var(--card-bg);
+      box-shadow: var(--shadow);
+      padding: 10px;
+      cursor: move;
+      user-select: none;
+      z-index: 10;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .canvas-node.selected {
+      border-color: var(--primary) !important;
+      box-shadow: 0 0 0 3px var(--primary-tint);
+    }
+
+    .node-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .node-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .node-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 2px;
+      border-radius: 3px;
+    }
+
+    .node-btn:hover {
+      color: var(--text);
+    }
+
+    .node-text {
+      outline: none;
+      font-size: 13.5px;
+      line-height: 1.4;
+      color: var(--text);
+      cursor: text;
+      user-select: text;
+      min-height: 30px;
+      white-space: pre-wrap;
+    }
+
+    .node-image {
+      max-width: 100%;
+      border-radius: 6px;
+      display: block;
+      pointer-events: none;
+    }
+
+    .color-swatches {
+      display: flex;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 1px solid rgba(0,0,0,0.2);
+    }
+
+    /* ─── Empty Placeholder ─── */
+    #empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      gap: 12px;
+      text-align: center;
+      padding: 20px;
+    }
+
+    /* ─── Context Menu / Dialog Modals ─── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      backdrop-filter: blur(2px);
+    }
+
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 12px;
+      padding: 20px;
+      width: 320px;
+      max-width: 90vw;
+      box-shadow: var(--shadow);
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--surface-border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      margin-bottom: 14px;
+    }
+
+    .modal-input:focus {
+      border-color: var(--primary);
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+  </style>
+  <script src="/supabase.js"></script>
+</head>
+<body>
+  <!-- ─── Sidebar: Folders Tree & Search ─── -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <span class="course-title" id="course-name-label">Course Notes</span>
+      <div class="header-actions">
+        <!-- Language toggle (EN / AR) -->
+        <button class="icon-btn" id="lang-btn" title="Toggle Language (العربية / English)">
+          <span id="lang-text" style="font-size: 11px; font-weight: 700;">AR</span>
+        </button>
+        <!-- Theme toggle (Light / Dark) -->
+        <button class="icon-btn" id="theme-btn" title="Toggle Theme">
+          <svg id="theme-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Feature 4: Search Bar -->
+    <div class="search-box">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.35-4.35"></path>
+      </svg>
+      <input type="text" id="search-input" class="search-input" placeholder="Search notes & canvas... (Ctrl+K)" />
+    </div>
+
+    <!-- Actions: Add Note, Canvas, Folder -->
+    <div class="tree-actions">
+      <button class="action-btn" id="add-note-btn" title="Add Note">
+        <span>📝</span><span id="lbl-new-note">Note</span>
+      </button>
+      <button class="action-btn" id="add-canvas-btn" title="Add Canvas">
+        <span>🎨</span><span id="lbl-new-canvas">Canvas</span>
+      </button>
+      <button class="action-btn" id="add-folder-btn" title="Add Folder">
+        <span>📁</span><span id="lbl-new-folder">Folder</span>
+      </button>
+    </div>
+
+    <!-- Feature 3: Nested Explorer Tree -->
+    <div class="tree-container" id="tree-root"></div>
+  </aside>
+
+  <!-- ─── Main Content ─── -->
+  <main id="main-content">
+    <!-- Empty State -->
+    <div id="empty-state">
+      <div style="font-size: 38px;">📚</div>
+      <p id="lbl-empty-prompt">Select or create a note or canvas to begin</p>
+    </div>
+
+    <!-- Feature 1: Text Editor View -->
+    <div id="editor-view">
+      <div class="editor-topbar">
+        <div class="save-indicator" id="save-status">
+          <span id="save-dot">●</span>
+          <span id="save-text">Saved</span>
+        </div>
+        <div class="word-count" id="word-count-badge">0 words</div>
+      </div>
+      <input type="text" id="editor-title-input" class="editor-title" placeholder="Untitled Note" />
+      <div id="editor-body-area" class="editor-body" contenteditable="true" placeholder="Start typing... Type [[ to link to another page"></div>
+    </div>
+
+    <!-- [[ Link Picker Dropdown -->
+    <div id="link-picker"></div>
+
+    <!-- Feature 2: Canvas View -->
+    <div id="canvas-view">
+      <div class="canvas-toolbar">
+        <button class="action-btn" id="canvas-add-text">
+          <span>T</span><span id="lbl-canvas-text">Add Text</span>
+        </button>
+        <button class="action-btn" id="canvas-add-img">
+          <span>🖼️</span><span id="lbl-canvas-img">Add Image</span>
+        </button>
+        <button class="action-btn" id="canvas-fit-btn">
+          <span>⛶</span><span id="lbl-canvas-fit">Fit Content</span>
+        </button>
+        <button class="icon-btn" id="canvas-zoom-in" title="Zoom In">+</button>
+        <button class="icon-btn" id="canvas-zoom-out" title="Zoom Out">-</button>
+        <button class="icon-btn" id="canvas-zoom-reset" title="Reset Zoom">100%</button>
+      </div>
+
+      <!-- Transformable Viewport -->
+      <div class="canvas-viewport" id="canvas-viewport">
+        <svg class="canvas-svg" id="canvas-svg">
+          <defs>
+            <marker id="arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--primary)" />
+            </marker>
+          </defs>
+          <g id="canvas-arrows-group"></g>
+        </svg>
+        <div id="canvas-nodes-container"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ─── Single Clean Script ─── -->
+  <script>
+    /* ─── 1. Storage & State ─── */
+    const STORAGE_KEY = 'uni_notes_items';
+    const params = new URLSearchParams(window.location.search);
+    const courseId = params.get('courseId') || 'general';
+    const courseName = params.get('courseName') || 'Course Notes';
+    const sbUrl = params.get('sbUrl');
+    const sbKey = params.get('sbKey');
+
+    let sbClient = null;
+    if (sbUrl && sbKey && window.supabase) {
+      try {
+        sbClient = window.supabase.createClient(sbUrl, sbKey);
+      } catch (e) {
+        console.warn('Supabase client init error', e);
+      }
+    }
+
+    let items = [];
+    let activeItem = null;
+    let expandedFolders = new Set();
+    let autosaveTimer = null;
+    let linkingState = null; // { range, query }
+    let connectingFromId = null;
+
+    let canvasTransform = { x: 40, y: 40, scale: 1 };
+    let isPanning = false;
+    let panStart = { x: 0, y: 0 };
+    let activeDragNode = null;
+    let dragOffset = { x: 0, y: 0 };
+
+    /* ─── 2. i18n Dictionary ─── */
+    const I18N = {
+      en: {
+        appTitle: 'Course Notes',
+        note: 'Note',
+        canvas: 'Canvas',
+        folder: 'Folder',
+        searchPlaceholder: 'Search notes & canvas... (Ctrl+K)',
+        saving: 'Saving…',
+        saved: 'Saved',
+        words: 'words',
+        emptyPrompt: 'Select or create a note or canvas to begin',
+        addText: 'Add Text',
+        addImage: 'Add Image',
+        fitContent: 'Fit Content',
+        untitledNote: 'Untitled Note',
+        untitledCanvas: 'Untitled Canvas',
+        untitledFolder: 'New Folder',
+        renamePrompt: 'Enter new title:',
+        movePrompt: 'Select destination folder:',
+        rootFolder: 'Root (Top Level)',
+        deleteConfirm: 'Are you sure you want to delete this item and its contents?',
+        connectPrompt: 'Click target node to connect',
+      },
+      ar: {
+        appTitle: 'ملاحظات المقرر',
+        note: 'ملاحظة',
+        canvas: 'لوحة',
+        folder: 'مجلد',
+        searchPlaceholder: 'بحث في الملاحظات واللوحات... (Ctrl+K)',
+        saving: 'جاري الحفظ…',
+        saved: 'تم الحفظ',
+        words: 'كلمة',
+        emptyPrompt: 'حدد أو أنشئ ملاحظة أو لوحة للبدء',
+        addText: 'إضافة نص',
+        addImage: 'إضافة صورة',
+        fitContent: 'ملاءمة المحتوى',
+        untitledNote: 'ملاحظة بدون عنوان',
+        untitledCanvas: 'لوحة بدون عنوان',
+        untitledFolder: 'مجلد جديد',
+        renamePrompt: 'أدخل العنوان الجديد:',
+        movePrompt: 'حدد المجلد الهدف:',
+        rootFolder: 'المستوى الرئيسي',
+        deleteConfirm: 'هل أنت متأكد من حذف هذا العنصر ومحتوياته؟',
+        connectPrompt: 'انقر على العقدة الهدف للربط',
+      }
+    };
+
+    let currentLang = localStorage.getItem('notes_lang') || 'en';
+    let currentTheme = localStorage.getItem('notes_theme') || 'dark';
+
+    /* ─── 3. Storage Functions (Supabase + Local Cache) ─── */
+    async function loadItems() {
+      // 1. Instant load from local cache
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const all = raw ? JSON.parse(raw) : [];
+        items = all.filter(it => it.courseId === courseId);
+      } catch (e) {
+        items = [];
+      }
+      renderTree();
+
+      // 2. Fetch from Supabase
+      if (sbClient) {
+        try {
+          const { data, error } = await sbClient
+            .from('course_notes')
+            .select('*')
+            .eq('course_id', courseId)
+            .order('created_at', { ascending: true });
+
+          if (!error && data && data.length > 0) {
+            items = data.map(r => ({
+              id: r.id,
+              courseId: r.course_id,
+              parentId: r.parent_id,
+              type: r.type,
+              title: r.title,
+              content: r.content || '',
+              updatedAt: r.updated_at
+            }));
+            saveLocalCache();
+            renderTree();
+            if (activeItem) {
+              const current = items.find(x => x.id === activeItem.id);
+              if (current) openItem(current.id);
+            }
+          }
+        } catch (e) {
+          console.warn('Supabase fetch failed, continuing with local cache', e);
+        }
+      }
+    }
+
+    function saveLocalCache() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const all = raw ? JSON.parse(raw) : [];
+        const otherItems = all.filter(it => it.courseId !== courseId);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([...otherItems, ...items]));
+      } catch (e) {
+        console.error('Local cache error', e);
+      }
+    }
+
+    function saveAllItems(itemToSync = null) {
+      saveLocalCache();
+      if (sbClient && itemToSync) {
+        syncItemToSupabase(itemToSync);
+      }
+    }
+
+    async function syncItemToSupabase(it) {
+      if (!sbClient) return;
+      try {
+        await sbClient.from('course_notes').upsert({
+          id: it.id,
+          course_id: courseId,
+          parent_id: it.parentId || null,
+          type: it.type,
+          title: it.title,
+          content: it.content || '',
+          updated_at: new Date().toISOString()
+        });
+      } catch (e) {
+        console.warn('Supabase upsert error', e);
+      }
+    }
+
+    function createItem(type, parentId = null) {
+      const t = I18N[currentLang];
+      const defaultTitle = type === 'note' ? t.untitledNote : type === 'canvas' ? t.untitledCanvas : t.untitledFolder;
+      const newItem = {
+        id: 'item_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        courseId,
+        parentId,
+        type,
+        title: defaultTitle,
+        content: type === 'canvas' ? JSON.stringify({ nodes: [], connections: [] }) : '',
+        updatedAt: new Date().toISOString()
+      };
+      items.push(newItem);
+      saveAllItems(newItem);
+      renderTree();
+      if (type !== 'folder') openItem(newItem.id);
+      return newItem;
+    }
+
+    function deleteItem(id) {
+      if (!confirm(I18N[currentLang].deleteConfirm)) return;
+      // Recursively delete item and its descendants
+      const toDelete = new Set([id]);
+      let added = true;
+      while (added) {
+        added = false;
+        items.forEach(it => {
+          if (it.parentId && toDelete.has(it.parentId) && !toDelete.has(it.id)) {
+            toDelete.add(it.id);
+            added = true;
+          }
+        });
+      }
+      items = items.filter(it => !toDelete.has(it.id));
+      saveLocalCache();
+      if (sbClient) {
+        sbClient.from('course_notes').delete().in('id', Array.from(toDelete)).then(() => {});
+      }
+      if (activeItem && toDelete.has(activeItem.id)) {
+        activeItem = null;
+        showEmptyState();
+      }
+      renderTree();
+    }
+
+    function renameItem(id) {
+      const it = items.find(x => x.id === id);
+      if (!it) return;
+      const newTitle = prompt(I18N[currentLang].renamePrompt, it.title);
+      if (newTitle && newTitle.trim()) {
+        it.title = newTitle.trim();
+        it.updatedAt = new Date().toISOString();
+        saveAllItems(it);
+        renderTree();
+        if (activeItem && activeItem.id === id) {
+          document.getElementById('editor-title-input').value = it.title;
+        }
+      }
+    }
+
+    function moveItem(id) {
+      const it = items.find(x => x.id === id);
+      if (!it) return;
+      const folders = items.filter(x => x.type === 'folder' && x.id !== id);
+      const options = [`0: ${I18N[currentLang].rootFolder}`, ...folders.map((f, i) => `${i + 1}: ${f.title}`)];
+      const pick = prompt(`${I18N[currentLang].movePrompt}\n\n${options.join('\n')}`, '0');
+      if (pick === null) return;
+      const idx = parseInt(pick, 10);
+      if (idx === 0) {
+        it.parentId = null;
+      } else if (folders[idx - 1]) {
+        it.parentId = folders[idx - 1].id;
+      }
+      it.updatedAt = new Date().toISOString();
+      saveAllItems(it);
+      renderTree();
+    }
+
+    /* ─── 4. Feature 3: Nested Explorer Tree ─── */
+    function renderTree(filterQuery = '') {
+      const root = document.getElementById('tree-root');
+      root.innerHTML = '';
+      const query = filterQuery.toLowerCase().trim();
+
+      const matchingIds = new Set();
+      if (query) {
+        items.forEach(it => {
+          const matchTitle = it.title.toLowerCase().includes(query);
+          const matchContent = (it.content || '').toLowerCase().includes(query);
+          if (matchTitle || matchContent) {
+            matchingIds.add(it.id);
+            // Also reveal its ancestors
+            let p = it.parentId;
+            while (p) {
+              matchingIds.add(p);
+              const parent = items.find(x => x.id === p);
+              p = parent ? parent.parentId : null;
+            }
+          }
+        });
+      }
+
+      function buildBranch(parentId) {
+        const children = items.filter(it => it.parentId === parentId);
+        if (!children.length) return null;
+
+        const branch = document.createElement('div');
+        branch.className = 'tree-children' + (parentId && !expandedFolders.has(parentId) && !query ? ' hidden' : '');
+
+        children.forEach(it => {
+          if (query && !matchingIds.has(it.id)) return;
+
+          const row = document.createElement('div');
+          row.className = 'tree-item' + (activeItem && activeItem.id === it.id ? ' active' : '');
+          if (it.type === 'folder' && !expandedFolders.has(it.id) && !query) {
+            row.classList.add('collapsed');
+          }
+
+          // Expand / collapse arrow for folders
+          if (it.type === 'folder') {
+            const arrow = document.createElement('span');
+            arrow.className = 'toggle-arrow';
+            arrow.innerHTML = '▾';
+            arrow.onclick = (e) => {
+              e.stopPropagation();
+              if (expandedFolders.has(it.id)) expandedFolders.delete(it.id);
+              else expandedFolders.add(it.id);
+              renderTree(filterQuery);
+            };
+            row.appendChild(arrow);
+          } else {
+            const spacer = document.createElement('span');
+            spacer.style.width = '14px';
+            row.appendChild(spacer);
+          }
+
+          // Icon
+          const icon = document.createElement('span');
+          icon.textContent = it.type === 'folder' ? '📁' : it.type === 'note' ? '📝' : '🎨';
+          row.appendChild(icon);
+
+          // Title
+          const title = document.createElement('span');
+          title.className = 'item-title';
+          title.textContent = it.title;
+          row.appendChild(title);
+
+          // Menu button (Rename, Move, Delete, Add Sub-item)
+          const menuBtn = document.createElement('button');
+          menuBtn.className = 'item-menu-btn';
+          menuBtn.innerHTML = '⋮';
+          menuBtn.title = 'Options';
+          menuBtn.onclick = (e) => {
+            e.stopPropagation();
+            showContextMenu(e, it);
+          };
+          row.appendChild(menuBtn);
+
+          // Click handler
+          row.onclick = () => {
+            if (it.type === 'folder') {
+              if (expandedFolders.has(it.id)) expandedFolders.delete(it.id);
+              else expandedFolders.add(it.id);
+              renderTree(filterQuery);
+            } else {
+              openItem(it.id);
+            }
+          };
+
+          branch.appendChild(row);
+
+          if (it.type === 'folder') {
+            const subBranch = buildBranch(it.id);
+            if (subBranch) branch.appendChild(subBranch);
+          }
+        });
+
+        return branch;
+      }
+
+      const topLevel = buildBranch(null);
+      if (topLevel) root.appendChild(topLevel);
+      else if (query) {
+        root.innerHTML = `<div style="padding: 12px; color: var(--text-muted); font-size: 12px;">${I18N[currentLang].noResults || 'No results found'}</div>`;
+      }
+    }
+
+    function showContextMenu(e, it) {
+      const actions = [
+        { label: '✏️ ' + I18N[currentLang].renamePrompt.replace(':', ''), fn: () => renameItem(it.id) },
+        { label: '↗️ ' + I18N[currentLang].movePrompt.replace(':', ''), fn: () => moveItem(it.id) },
+        { label: '🗑️ Delete', fn: () => deleteItem(it.id) }
+      ];
+      if (it.type === 'folder') {
+        actions.unshift(
+          { label: '📝 ' + I18N[currentLang].note, fn: () => { expandedFolders.add(it.id); createItem('note', it.id); } },
+          { label: '🎨 ' + I18N[currentLang].canvas, fn: () => { expandedFolders.add(it.id); createItem('canvas', it.id); } },
+          { label: '📁 ' + I18N[currentLang].folder, fn: () => { expandedFolders.add(it.id); createItem('folder', it.id); } }
+        );
+      }
+      const pick = prompt(actions.map((a, i) => `${i + 1}: ${a.label}`).join('\n'), '1');
+      if (pick) {
+        const idx = parseInt(pick, 10) - 1;
+        if (actions[idx]) actions[idx].fn();
+      }
+    }
+
+    /* ─── 5. Navigation: Open Item ─── */
+    function openItem(id) {
+      const it = items.find(x => x.id === id);
+      if (!it) return;
+      activeItem = it;
+      renderTree();
+
+      document.getElementById('empty-state').style.display = 'none';
+      if (it.type === 'note') {
+        document.getElementById('canvas-view').style.display = 'none';
+        document.getElementById('editor-view').style.display = 'flex';
+        initEditorView(it);
+      } else if (it.type === 'canvas') {
+        document.getElementById('editor-view').style.display = 'none';
+        document.getElementById('canvas-view').style.display = 'flex';
+        initCanvasView(it);
+      }
+    }
+
+    function showEmptyState() {
+      document.getElementById('empty-state').style.display = 'flex';
+      document.getElementById('editor-view').style.display = 'none';
+      document.getElementById('canvas-view').style.display = 'none';
+    }
+
+    /* ─── 6. Feature 1: Text Editor ─── */
+    function initEditorView(note) {
+      const titleInput = document.getElementById('editor-title-input');
+      const bodyArea = document.getElementById('editor-body-area');
+      titleInput.value = note.title;
+      bodyArea.innerHTML = note.content || '';
+      updateWordCount();
+      setSaveStatus('saved');
+
+      titleInput.oninput = () => {
+        note.title = titleInput.value || I18N[currentLang].untitledNote;
+        triggerAutosave();
+        renderTree();
+      };
+
+      bodyArea.oninput = (e) => {
+        updateWordCount();
+        triggerAutosave();
+        checkBracketLinking(e);
+      };
+
+      // Handle clicking on page links inside editor
+      bodyArea.onclick = (e) => {
+        const link = e.target.closest('.page-link');
+        if (link && link.dataset.id) {
+          e.preventDefault();
+          openItem(link.dataset.id);
+        }
+      };
+    }
+
+    function updateWordCount() {
+      const text = document.getElementById('editor-body-area').innerText || '';
+      const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+      document.getElementById('word-count-badge').textContent = `${words} ${I18N[currentLang].words}`;
+    }
+
+    function setSaveStatus(status) {
+      const statusEl = document.getElementById('save-status');
+      const textEl = document.getElementById('save-text');
+      if (status === 'saving') {
+        statusEl.className = 'save-indicator';
+        textEl.textContent = I18N[currentLang].saving;
+      } else {
+        statusEl.className = 'save-indicator saved';
+        textEl.textContent = I18N[currentLang].saved;
+      }
+    }
+
+    function triggerAutosave() {
+      setSaveStatus('saving');
+      clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(() => {
+        if (!activeItem || activeItem.type !== 'note') return;
+        activeItem.content = document.getElementById('editor-body-area').innerHTML;
+        activeItem.updatedAt = new Date().toISOString();
+        saveAllItems();
+        setSaveStatus('saved');
+      }, 500);
+    }
+
+    /* [[ Link Picker Implementation */
+    function checkBracketLinking(e) {
+      const sel = window.getSelection();
+      if (!sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      const text = range.startContainer.textContent || '';
+      const offset = range.startOffset;
+
+      // Look back for '[['
+      const before = text.slice(0, offset);
+      const bracketIdx = before.lastIndexOf('[[');
+      if (bracketIdx !== -1 && !before.slice(bracketIdx).includes(']]')) {
+        const query = before.slice(bracketIdx + 2).toLowerCase();
+        showLinkPicker(range, bracketIdx, query);
+      } else {
+        hideLinkPicker();
+      }
+    }
+
+    function showLinkPicker(range, bracketIdx, query) {
+      const picker = document.getElementById('link-picker');
+      const rect = range.getBoundingClientRect();
+      picker.style.display = 'block';
+      picker.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+      picker.style.left = Math.min(rect.left, window.innerWidth - 260) + 'px';
+
+      const pages = items.filter(x => x.type === 'note' && x.id !== activeItem.id && x.title.toLowerCase().includes(query));
+      if (!pages.length) {
+        picker.innerHTML = `<div style="padding: 6px 10px; color: var(--text-muted); font-size: 12px;">No matching notes</div>`;
+        return;
+      }
+
+      picker.innerHTML = pages.map(p => `
+        <div class="link-picker-item" data-id="${p.id}" data-title="${p.title}">
+          📝 ${p.title}
+        </div>
+      `).join('');
+
+      picker.querySelectorAll('.link-picker-item').forEach(el => {
+        el.onclick = () => {
+          insertPageLink(el.dataset.id, el.dataset.title, bracketIdx);
+        };
+      });
+    }
+
+    function hideLinkPicker() {
+      document.getElementById('link-picker').style.display = 'none';
+    }
+
+    function insertPageLink(targetId, targetTitle, bracketIdx) {
+      const sel = window.getSelection();
+      if (!sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      const node = range.startContainer;
+      const text = node.textContent;
+
+      // Replace [[... with link node
+      const before = text.slice(0, bracketIdx);
+      const after = text.slice(range.startOffset);
+
+      const link = document.createElement('a');
+      link.className = 'page-link';
+      link.dataset.id = targetId;
+      link.textContent = `[[${targetTitle}]]`;
+      link.contentEditable = 'false';
+
+      const parent = node.parentNode;
+      const afterNode = document.createTextNode(after || ' ');
+      node.textContent = before;
+
+      parent.insertBefore(link, node.nextSibling);
+      parent.insertBefore(afterNode, link.nextSibling);
+
+      hideLinkPicker();
+      triggerAutosave();
+    }
+
+    /* ─── 7. Feature 2: Canvas Board ─── */
+    function getCanvasData() {
+      try {
+        return JSON.parse(activeItem.content) || { nodes: [], connections: [] };
+      } catch (e) {
+        return { nodes: [], connections: [] };
+      }
+    }
+
+    function saveCanvasData(data) {
+      if (!activeItem || activeItem.type !== 'canvas') return;
+      activeItem.content = JSON.stringify(data);
+      activeItem.updatedAt = new Date().toISOString();
+      saveAllItems();
+    }
+
+    function initCanvasView() {
+      renderCanvas();
+      setupCanvasInteractions();
+    }
+
+    function renderCanvas() {
+      const data = getCanvasData();
+      const container = document.getElementById('canvas-nodes-container');
+      const arrowsGroup = document.getElementById('canvas-arrows-group');
+      const viewport = document.getElementById('canvas-viewport');
+
+      viewport.style.transform = `translate(${canvasTransform.x}px, ${canvasTransform.y}px) scale(${canvasTransform.scale})`;
+
+      // Render Nodes
+      container.innerHTML = '';
+      data.nodes.forEach(node => {
+        const el = document.createElement('div');
+        el.className = 'canvas-node' + (node.id === connectingFromId ? ' selected' : '');
+        el.dataset.id = node.id;
+        el.style.left = node.x + 'px';
+        el.style.top = node.y + 'px';
+        if (node.color) el.style.background = node.color;
+
+        // Header with delete & connect
+        const header = document.createElement('div');
+        header.className = 'node-header';
+        header.innerHTML = `<span>${node.type === 'text' ? 'Text' : 'Image'}</span>`;
+
+        const actions = document.createElement('div');
+        actions.className = 'node-actions';
+
+        const connectBtn = document.createElement('button');
+        connectBtn.className = 'node-btn';
+        connectBtn.textContent = '🔗';
+        connectBtn.title = 'Connect with arrow';
+        connectBtn.onclick = (e) => {
+          e.stopPropagation();
+          startConnecting(node.id);
+        };
+        actions.appendChild(connectBtn);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'node-btn';
+        delBtn.textContent = '✕';
+        delBtn.title = 'Delete node';
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          deleteCanvasNode(node.id);
+        };
+        actions.appendChild(delBtn);
+
+        header.appendChild(actions);
+        el.appendChild(header);
+
+        // Content
+        if (node.type === 'text') {
+          const textEl = document.createElement('div');
+          textEl.className = 'node-text';
+          textEl.contentEditable = 'true';
+          textEl.textContent = node.text || '';
+          textEl.oninput = () => {
+            node.text = textEl.innerText;
+            saveCanvasData(data);
+          };
+          el.appendChild(textEl);
+        } else if (node.type === 'image') {
+          const img = document.createElement('img');
+          img.className = 'node-image';
+          img.src = node.src;
+          el.appendChild(img);
+        }
+
+        // Color Swatches
+        const swatches = document.createElement('div');
+        swatches.className = 'color-swatches';
+        const palette = ['#151e32', '#2f1519', '#15291b', '#18253a', '#2b1d38'];
+        palette.forEach(c => {
+          const sw = document.createElement('span');
+          sw.className = 'swatch';
+          sw.style.background = c;
+          sw.onclick = (e) => {
+            e.stopPropagation();
+            node.color = c;
+            el.style.background = c;
+            saveCanvasData(data);
+          };
+          swatches.appendChild(sw);
+        });
+        el.appendChild(swatches);
+
+        // Drag node
+        el.onmousedown = (e) => {
+          if (e.target.isContentEditable || e.target.tagName === 'BUTTON' || e.target.classList.contains('swatch')) return;
+          if (connectingFromId && connectingFromId !== node.id) {
+            e.stopPropagation();
+            finishConnecting(node.id);
+            return;
+          }
+          activeDragNode = { node, el };
+          dragOffset.x = (e.clientX / canvasTransform.scale) - node.x;
+          dragOffset.y = (e.clientY / canvasTransform.scale) - node.y;
+          e.stopPropagation();
+        };
+
+        container.appendChild(el);
+      });
+
+      // Render Arrows
+      arrowsGroup.innerHTML = '';
+      data.connections.forEach(conn => {
+        const fromNode = data.nodes.find(n => n.id === conn.fromId);
+        const toNode = data.nodes.find(n => n.id === conn.toId);
+        if (fromNode && toNode) {
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          const sx = fromNode.x + 100;
+          const sy = fromNode.y + 40;
+          const ex = toNode.x + 100;
+          const ey = toNode.y + 40;
+          const dx = ex - sx;
+          const dy = ey - sy;
+          const cx1 = sx + dx * 0.4;
+          const cy1 = sy;
+          const cx2 = sx + dx * 0.6;
+          const cy2 = ey;
+          path.setAttribute('d', `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${ex} ${ey}`);
+          path.setAttribute('fill', 'none');
+          path.setAttribute('stroke', conn.color || 'var(--primary)');
+          path.setAttribute('stroke-width', '2.5');
+          path.setAttribute('marker-end', 'url(#arrowhead)');
+          arrowsGroup.appendChild(path);
+        }
+      });
+    }
+
+    function setupCanvasInteractions() {
+      const canvasView = document.getElementById('canvas-view');
+      const viewport = document.getElementById('canvas-viewport');
+
+      canvasView.onmousedown = (e) => {
+        if (e.target.closest('.canvas-node') || e.target.closest('.canvas-toolbar')) return;
+        isPanning = true;
+        panStart.x = e.clientX - canvasTransform.x;
+        panStart.y = e.clientY - canvasTransform.y;
+        viewport.classList.add('panning');
+      };
+
+      window.onmousemove = (e) => {
+        if (isPanning) {
+          canvasTransform.x = e.clientX - panStart.x;
+          canvasTransform.y = e.clientY - panStart.y;
+          viewport.style.transform = `translate(${canvasTransform.x}px, ${canvasTransform.y}px) scale(${canvasTransform.scale})`;
+        } else if (activeDragNode) {
+          const nx = (e.clientX / canvasTransform.scale) - dragOffset.x;
+          const ny = (e.clientY / canvasTransform.scale) - dragOffset.y;
+          activeDragNode.node.x = Math.round(nx);
+          activeDragNode.node.y = Math.round(ny);
+          activeDragNode.el.style.left = activeDragNode.node.x + 'px';
+          activeDragNode.el.style.top = activeDragNode.node.y + 'px';
+          renderCanvas(); // Redraw connected arrows
+        }
+      };
+
+      window.onmouseup = () => {
+        if (isPanning) {
+          isPanning = false;
+          viewport.classList.remove('panning');
+        }
+        if (activeDragNode) {
+          saveCanvasData(getCanvasData());
+          activeDragNode = null;
+        }
+      };
+
+      canvasView.onwheel = (e) => {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.1 : 0.9;
+        const newScale = Math.min(Math.max(canvasTransform.scale * factor, 0.25), 3);
+        const rect = canvasView.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        canvasTransform.x = mouseX - (mouseX - canvasTransform.x) * (newScale / canvasTransform.scale);
+        canvasTransform.y = mouseY - (mouseY - canvasTransform.y) * (newScale / canvasTransform.scale);
+        canvasTransform.scale = newScale;
+        viewport.style.transform = `translate(${canvasTransform.x}px, ${canvasTransform.y}px) scale(${canvasTransform.scale})`;
+      };
+    }
+
+    function addCanvasTextNode() {
+      const data = getCanvasData();
+      const node = {
+        id: 'node_' + Date.now(),
+        type: 'text',
+        x: Math.round((-canvasTransform.x + 300) / canvasTransform.scale),
+        y: Math.round((-canvasTransform.y + 200) / canvasTransform.scale),
+        text: 'New thought or concept...',
+        color: ''
+      };
+      data.nodes.push(node);
+      saveCanvasData(data);
+      renderCanvas();
+    }
+
+    function addCanvasImageNode() {
+      const url = prompt('Enter image URL or paste direct link:');
+      if (!url) return;
+      const data = getCanvasData();
+      const node = {
+        id: 'node_' + Date.now(),
+        type: 'image',
+        x: Math.round((-canvasTransform.x + 300) / canvasTransform.scale),
+        y: Math.round((-canvasTransform.y + 200) / canvasTransform.scale),
+        src: url,
+        color: ''
+      };
+      data.nodes.push(node);
+      saveCanvasData(data);
+      renderCanvas();
+    }
+
+    function deleteCanvasNode(nodeId) {
+      const data = getCanvasData();
+      data.nodes = data.nodes.filter(n => n.id !== nodeId);
+      data.connections = data.connections.filter(c => c.fromId !== nodeId && c.toId !== nodeId);
+      saveCanvasData(data);
+      renderCanvas();
+    }
+
+    function startConnecting(fromId) {
+      connectingFromId = fromId;
+      renderCanvas();
+    }
+
+    function finishConnecting(toId) {
+      if (!connectingFromId || connectingFromId === toId) {
+        connectingFromId = null;
+        renderCanvas();
+        return;
+      }
+      const data = getCanvasData();
+      const exists = data.connections.some(c => c.fromId === connectingFromId && c.toId === toId);
+      if (!exists) {
+        data.connections.push({
+          id: 'conn_' + Date.now(),
+          fromId: connectingFromId,
+          toId: toId,
+          color: 'var(--primary)'
+        });
+        saveCanvasData(data);
+      }
+      connectingFromId = null;
+      renderCanvas();
+    }
+
+    function fitCanvasToContent() {
+      const data = getCanvasData();
+      if (!data.nodes.length) return;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      data.nodes.forEach(n => {
+        if (n.x < minX) minX = n.x;
+        if (n.y < minY) minY = n.y;
+        if (n.x + 200 > maxX) maxX = n.x + 200;
+        if (n.y + 120 > maxY) maxY = n.y + 120;
+      });
+
+      const pad = 80;
+      const w = maxX - minX + pad * 2;
+      const h = maxY - minY + pad * 2;
+      const view = document.getElementById('canvas-view');
+      const vW = view.clientWidth;
+      const vH = view.clientHeight;
+
+      const scale = Math.min(Math.max(Math.min(vW / w, vH / h), 0.3), 1.5);
+      canvasTransform.scale = scale;
+      canvasTransform.x = (vW - (maxX + minX) * scale) / 2;
+      canvasTransform.y = (vH - (maxY + minY) * scale) / 2;
+
+      document.getElementById('canvas-viewport').style.transform =
+        `translate(${canvasTransform.x}px, ${canvasTransform.y}px) scale(${canvasTransform.scale})`;
+    }
+
+    /* ─── 8. UI Toggles: Language & Theme ─── */
+    function setLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('notes_lang', lang);
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+      document.getElementById('lang-text').textContent = lang === 'ar' ? 'EN' : 'AR';
+
+      const t = I18N[lang];
+      document.getElementById('lbl-new-note').textContent = t.note;
+      document.getElementById('lbl-new-canvas').textContent = t.canvas;
+      document.getElementById('lbl-new-folder').textContent = t.folder;
+      document.getElementById('search-input').placeholder = t.searchPlaceholder;
+      document.getElementById('lbl-empty-prompt').textContent = t.emptyPrompt;
+      document.getElementById('lbl-canvas-text').textContent = t.addText;
+      document.getElementById('lbl-canvas-img').textContent = t.addImage;
+      document.getElementById('lbl-canvas-fit').textContent = t.fitContent;
+
+      renderTree();
+    }
+
+    function setTheme(theme) {
+      currentTheme = theme;
+      localStorage.setItem('notes_theme', theme);
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+
+    /* ─── 9. Initialization & Event Bindings ─── */
+    function init() {
+      document.getElementById('course-name-label').textContent = courseName;
+      setTheme(currentTheme);
+      setLanguage(currentLang);
+      loadItems();
+      renderTree();
+
+      // Header buttons
+      document.getElementById('theme-btn').onclick = () => setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+      document.getElementById('lang-btn').onclick = () => setLanguage(currentLang === 'en' ? 'ar' : 'en');
+
+      // Actions buttons
+      document.getElementById('add-note-btn').onclick = () => createItem('note');
+      document.getElementById('add-canvas-btn').onclick = () => createItem('canvas');
+      document.getElementById('add-folder-btn').onclick = () => createItem('folder');
+
+      // Search (Feature 4)
+      const searchInput = document.getElementById('search-input');
+      searchInput.oninput = (e) => renderTree(e.target.value);
+      window.onkeydown = (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          searchInput.focus();
+        }
+      };
+
+      // Canvas buttons
+      document.getElementById('canvas-add-text').onclick = addCanvasTextNode;
+      document.getElementById('canvas-add-img').onclick = addCanvasImageNode;
+      document.getElementById('canvas-fit-btn').onclick = fitCanvasToContent;
+      document.getElementById('canvas-zoom-in').onclick = () => {
+        canvasTransform.scale = Math.min(canvasTransform.scale * 1.2, 3);
+        renderCanvas();
+      };
+      document.getElementById('canvas-zoom-out').onclick = () => {
+        canvasTransform.scale = Math.max(canvasTransform.scale / 1.2, 0.25);
+        renderCanvas();
+      };
+      document.getElementById('canvas-zoom-reset').onclick = () => {
+        canvasTransform.scale = 1;
+        renderCanvas();
+      };
+
+      // Open first item if exists
+      if (items.length) {
+        const first = items.find(it => it.type !== 'folder');
+        if (first) openItem(first.id);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
+
