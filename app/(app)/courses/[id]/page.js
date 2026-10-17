@@ -13,6 +13,7 @@ import AddModal from "@/components/AddModal";
 import { ArrowLeft, BookOpen, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTheme } from "next-themes";
 
 export default function CourseDetail() {
   const { id } = useParams();
@@ -82,9 +83,11 @@ export default function CourseDetail() {
     if (ok) router.replace("/courses");
   }
 
+  const { resolvedTheme } = useTheme();
+  const effectiveTheme = resolvedTheme === "dark" || resolvedTheme === "neutral-dark" ? "dark" : "light";
   const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const sbKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-  const notesSrc = `/notes.html?courseId=${course.id}&courseName=${encodeURIComponent(course.name)}&sbUrl=${encodeURIComponent(sbUrl)}&sbKey=${encodeURIComponent(sbKey)}`;
+  const notesSrc = `/notes.html?courseId=${course.id}&courseName=${encodeURIComponent(course.name)}&sbUrl=${encodeURIComponent(sbUrl)}&sbKey=${encodeURIComponent(sbKey)}&theme=${effectiveTheme}`;
 
   if (view === "notes") {
     return (

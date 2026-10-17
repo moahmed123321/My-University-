@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr" class="dark">
+<html lang="en" dir="ltr" class="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -66,6 +66,60 @@
       flex-direction: column;
       height: 100%;
       user-select: none;
+      transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.16s ease;
+      position: relative;
+    }
+
+    #sidebar.collapsed {
+      width: 0 !important;
+      min-width: 0 !important;
+      border-inline-end: none !important;
+      overflow: hidden !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    #open-sidebar-btn {
+      position: absolute;
+      top: 12px;
+      inset-inline-start: 12px;
+      z-index: 100;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      box-shadow: var(--shadow);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    #open-sidebar-btn:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+      border-color: var(--primary);
+    }
+
+    body.sidebar-collapsed #open-sidebar-btn {
+      display: inline-flex;
+    }
+
+    body.sidebar-collapsed .canvas-toolbar {
+      inset-inline-start: 56px;
+    }
+
+    body.sidebar-collapsed #editor-view {
+      padding-inline-start: 56px;
+    }
+
+    html[dir="rtl"] #collapse-sidebar-btn svg,
+    html[dir="rtl"] #open-sidebar-btn svg {
+      transform: scaleX(-1);
     }
 
     #main-content {
@@ -573,7 +627,16 @@
   <!-- ─── Sidebar: Folders Tree & Search ─── -->
   <aside id="sidebar">
     <div class="sidebar-header">
-      <span class="course-title" id="course-name-label">Course Notes</span>
+      <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1;">
+        <button class="icon-btn" id="collapse-sidebar-btn" title="Collapse sidebar (Ctrl+\)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+            <path d="M9 3v18"/>
+            <path d="m14 15-3-3 3-3"/>
+          </svg>
+        </button>
+        <span class="course-title" id="course-name-label">Course Notes</span>
+      </div>
       <div class="header-actions">
         <!-- Language toggle (EN / AR) -->
         <button class="icon-btn" id="lang-btn" title="Toggle Language (العربية / English)">
@@ -582,8 +645,7 @@
         <!-- Theme toggle (Light / Dark) -->
         <button class="icon-btn" id="theme-btn" title="Toggle Theme">
           <svg id="theme-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="5"></circle>
-            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
           </svg>
         </button>
       </div>
@@ -617,6 +679,15 @@
 
   <!-- ─── Main Content ─── -->
   <main id="main-content">
+    <!-- Floating button to reopen sidebar when collapsed -->
+    <button class="icon-btn" id="open-sidebar-btn" title="Open sidebar (Ctrl+\)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+        <path d="M9 3v18"/>
+        <path d="m13 9 3 3-3 3"/>
+      </svg>
+    </button>
+
     <!-- Empty State -->
     <div id="empty-state">
       <div style="font-size: 38px;">📚</div>
@@ -726,6 +797,8 @@
         rootFolder: 'Root (Top Level)',
         deleteConfirm: 'Are you sure you want to delete this item and its contents?',
         connectPrompt: 'Click target node to connect',
+        collapseSidebar: 'Collapse sidebar (Ctrl+\\)',
+        openSidebar: 'Open sidebar (Ctrl+\\)',
       },
       ar: {
         appTitle: 'ملاحظات المقرر',
@@ -748,11 +821,15 @@
         rootFolder: 'المستوى الرئيسي',
         deleteConfirm: 'هل أنت متأكد من حذف هذا العنصر ومحتوياته؟',
         connectPrompt: 'انقر على العقدة الهدف للربط',
+        collapseSidebar: 'طي الشريط الجانبي (Ctrl+\\)',
+        openSidebar: 'فتح الشريط الجانبي (Ctrl+\\)',
       }
     };
 
     let currentLang = localStorage.getItem('notes_lang') || 'en';
-    let currentTheme = localStorage.getItem('notes_theme') || 'dark';
+    const paramTheme = params.get('theme');
+    let currentTheme = paramTheme || localStorage.getItem('notes_theme') || 'light';
+    let isSidebarCollapsed = localStorage.getItem('notes_sidebar_collapsed') === 'true';
 
     /* ─── 3. Storage Functions (Supabase + Local Cache) ─── */
     async function loadItems() {
@@ -1517,6 +1594,12 @@
       document.getElementById('lbl-canvas-text').textContent = t.addText;
       document.getElementById('lbl-canvas-img').textContent = t.addImage;
       document.getElementById('lbl-canvas-fit').textContent = t.fitContent;
+      if (document.getElementById('collapse-sidebar-btn')) {
+        document.getElementById('collapse-sidebar-btn').title = t.collapseSidebar;
+      }
+      if (document.getElementById('open-sidebar-btn')) {
+        document.getElementById('open-sidebar-btn').title = t.openSidebar;
+      }
 
       renderTree();
     }
@@ -1524,10 +1607,32 @@
     function setTheme(theme) {
       currentTheme = theme;
       localStorage.setItem('notes_theme', theme);
+      const themeIcon = document.getElementById('theme-icon');
       if (theme === 'dark') {
         document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+        if (themeIcon) {
+          themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>';
+        }
       } else {
         document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+        if (themeIcon) {
+          themeIcon.innerHTML = '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>';
+        }
+      }
+    }
+
+    function setSidebarCollapsed(collapsed) {
+      isSidebarCollapsed = collapsed;
+      localStorage.setItem('notes_sidebar_collapsed', collapsed ? 'true' : 'false');
+      const sidebar = document.getElementById('sidebar');
+      if (collapsed) {
+        sidebar.classList.add('collapsed');
+        document.body.classList.add('sidebar-collapsed');
+      } else {
+        sidebar.classList.remove('collapsed');
+        document.body.classList.remove('sidebar-collapsed');
       }
     }
 
@@ -1536,8 +1641,13 @@
       document.getElementById('course-name-label').textContent = courseName;
       setTheme(currentTheme);
       setLanguage(currentLang);
+      setSidebarCollapsed(isSidebarCollapsed);
       loadItems();
       renderTree();
+
+      // Sidebar buttons
+      document.getElementById('collapse-sidebar-btn').onclick = () => setSidebarCollapsed(true);
+      document.getElementById('open-sidebar-btn').onclick = () => setSidebarCollapsed(false);
 
       // Header buttons
       document.getElementById('theme-btn').onclick = () => setTheme(currentTheme === 'dark' ? 'light' : 'dark');
@@ -1548,15 +1658,18 @@
       document.getElementById('add-canvas-btn').onclick = () => createItem('canvas');
       document.getElementById('add-folder-btn').onclick = () => createItem('folder');
 
-      // Search (Feature 4)
+      // Search & Keyboard shortcuts
       const searchInput = document.getElementById('search-input');
       searchInput.oninput = (e) => renderTree(e.target.value);
-      window.onkeydown = (e) => {
+      window.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
           e.preventDefault();
           searchInput.focus();
+        } else if ((e.ctrlKey || e.metaKey) && (e.key === '\\' || e.key === 'b')) {
+          e.preventDefault();
+          setSidebarCollapsed(!isSidebarCollapsed);
         }
-      };
+      });
 
       // Canvas buttons
       document.getElementById('canvas-add-text').onclick = addCanvasTextNode;

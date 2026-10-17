@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { PageHeader } from "@/components/ui";
 import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "next-themes";
 
 export default function CourseNotesPage() {
   const { id } = useParams();
@@ -41,9 +42,11 @@ export default function CourseNotesPage() {
     );
   }
 
+  const { resolvedTheme } = useTheme();
+  const effectiveTheme = resolvedTheme === "dark" || resolvedTheme === "neutral-dark" ? "dark" : "light";
   const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const sbKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-  const notesSrc = `/notes.html?courseId=${course.id}&courseName=${encodeURIComponent(course.name)}&sbUrl=${encodeURIComponent(sbUrl)}&sbKey=${encodeURIComponent(sbKey)}`;
+  const notesSrc = `/notes.html?courseId=${course.id}&courseName=${encodeURIComponent(course.name)}&sbUrl=${encodeURIComponent(sbUrl)}&sbKey=${encodeURIComponent(sbKey)}&theme=${effectiveTheme}`;
 
   return (
     <div className="space-y-4">
