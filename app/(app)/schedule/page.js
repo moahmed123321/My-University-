@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { DAY_NAMES, DAY_ORDER, fmtTime, fmtDate, isoDate } from "@/lib/helpers";
+import { DAY_NAMES, DAY_ORDER, fmtTime, isoDate } from "@/lib/helpers";
 import { removeRow } from "@/lib/db";
-import { Empty } from "@/components/ui";
 import AddModal from "@/components/AddModal";
 import EditLectureModal from "@/components/EditLectureModal";
 import EditExamModal from "@/components/EditExamModal";
@@ -26,7 +25,6 @@ import {
   ChevronRight,
   ChevronDown,
   MapPin,
-  Pencil,
   Trash2,
   GraduationCap,
   GripVertical,
@@ -36,16 +34,6 @@ import { cn } from "@/lib/utils";
 
 const mix = (c, pct, base = "hsl(var(--card))") =>
   `color-mix(in srgb, ${c} ${pct}%, ${base})`;
-
-const daysUntil = (d) =>
-  Math.round((new Date(d + "T00:00") - new Date(isoDate() + "T00:00")) / 864e5);
-
-const relLabel = (n) => {
-  if (n === 0) return "Today";
-  if (n === 1) return "Tomorrow";
-  if (n > 1) return `In ${n} days`;
-  return n === -1 ? "Yesterday" : `${-n} days ago`;
-};
 
 // 12-hour hour label (e.g. "8 AM", "12 PM", "3 PM")
 function formatHourLabel(h) {
@@ -340,7 +328,6 @@ export default function SchedulePage() {
   const [lectures, setLectures] = useState([]);
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("week"); // "week" | "exams"
   const [modal, setModal] = useState(null); // "lecture" | "exam" | null
   const [modalDefaults, setModalDefaults] = useState({});
   const [editingLecture, setEditingLecture] = useState(null);
@@ -374,10 +361,6 @@ export default function SchedulePage() {
 
   useEffect(() => {
     load();
-    try {
-      const t = new URLSearchParams(window.location.search).get("tab");
-      if (t === "exams" || t === "week") setTab(t);
-    } catch {}
   }, [load]);
 
   // Live timer for current time indicator (updates every minute)
@@ -385,15 +368,6 @@ export default function SchedulePage() {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
-
-  const changeTab = (t) => {
-    setTab(t);
-    try {
-      const u = new URL(window.location.href);
-      u.searchParams.set("tab", t);
-      window.history.replaceState(null, "", u);
-    } catch {}
-  };
 
   const todayDow = new Date().getDay();
   const today = isoDate();
@@ -438,11 +412,11 @@ export default function SchedulePage() {
 
   // Scroll to 8 AM on load
   useEffect(() => {
-    if (!loading && tab === "week" && gridContainerRef.current) {
+    if (!loading && gridContainerRef.current) {
       const scrollTarget = Math.max((startHour - 7) * HOUR_HEIGHT, 0);
       gridContainerRef.current.scrollTop = scrollTarget;
     }
-  }, [loading, tab, startHour]);
+  }, [loading, startHour]);
 
   // Compute dates for the current view week (starts Saturday by DAY_ORDER)
   const weekDates = useMemo(() => {
@@ -663,33 +637,6 @@ export default function SchedulePage() {
           </div>
         </div>
 
-        {/* Right: View Switcher */}
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-xl bg-muted p-1">
-            <button
-              onClick={() => changeTab("week")}
-              className={cn(
-                "rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors",
-                tab === "week"
-                  ? "bg-card text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Week View
-            </button>
-            <button
-              onClick={() => changeTab("exams")}
-              className={cn(
-                "rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors",
-                tab === "exams"
-                  ? "bg-card text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Exams ({exams.length})
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* ─── Main Schedule View ─── */}
@@ -697,7 +644,7 @@ export default function SchedulePage() {
         <p className="py-12 text-center text-sm text-muted-foreground">
           Loading your calendar schedule...
         </p>
-      ) : tab === "week" ? (
+      ) : (
         <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
           {/* Scrollable Google Calendar Grid */}
           <div
@@ -865,73 +812,6 @@ export default function SchedulePage() {
               </div>
             </div>
           </div>
-        </div>
-      ) : sortedExams.length === 0 ? (
-        <div className="rounded-2xl border bg-card p-10 text-center shadow-xs">
-          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground">
-            <GraduationCap className="h-6 w-6" />
-          </div>
-          <h3 className="mt-3 font-semibold text-foreground">No exams scheduled</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Add upcoming midterm and final exams to keep track of your dates.
-          </p>
-          <button
-            onClick={() => openAddModal("exam")}
-            className="btn-primary mt-4 inline-flex items-center gap-1.5"
-          >
-            <Plus className="h-4 w-4" />
-            Add Exam
-          </button>
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {exams.map((x) => (
-            <div
-              key={x.id}
-              onClick={() => setEditingExam(x)}
-              className="cursor-pointer transition-transform hover:-translate-y-0.5"
-            >
-              <div className="rounded-2xl border-2 border-slate-700 bg-slate-900 p-5 text-white shadow-md dark:border-zinc-700 dark:bg-zinc-900">
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-2.5 py-0.5 text-xs font-bold text-amber-300">
-                    <GraduationCap className="h-3.5 w-3.5 text-amber-400" />
-                    OFFICIAL EXAM
-                  </span>
-                  <span className="text-xs text-slate-300 font-semibold">
-                    {fmtDate(x.exam_date)}
-                  </span>
-                </div>
-                <h3 className="text-base font-bold text-white leading-tight">
-                  {x.courses?.name}
-                </h3>
-                <div className="mt-2 flex items-center gap-2 text-xs text-slate-300">
-                  <Clock className="h-3.5 w-3.5 text-slate-400" />
-                  <span>{fmtTime(x.exam_time) || "Time TBA"}</span>
-                  {x.room && (
-                    <>
-                      <span>·</span>
-                      <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                      <span>{x.room}</span>
-                    </>
-                  )}
-                </div>
-                <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-3">
-                  <span className="text-xs text-slate-400 font-medium">
-                    {relLabel(daysUntil(x.exam_date))}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      del("exams", x.id);
-                    }}
-                    className="text-xs font-medium text-red-400 hover:text-red-300"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       )}
 
