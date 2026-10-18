@@ -508,7 +508,7 @@ const FORMS = {
   },
   note: {
     title: "Add Note",
-    nameLabel: "Note title",
+    nameLabel: "Title / Address",
     cta: "Add note",
     ok: "Note added",
   },
@@ -648,18 +648,18 @@ function QuickModal({
                 className="input"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={type === "note" ? "Title (e.g. Chapter summary, Formula...)" : ""}
+                placeholder={type === "note" ? "Title / Address (e.g. Chapter summary, Formula...)" : ""}
               />
             </label>
 
             {type === "note" && (
               <label className="block space-y-1.5 text-sm font-medium">
-                Note space / content
+                Description
                 <textarea
                   className="input min-h-[110px] resize-y py-2 text-sm leading-relaxed"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Write your note here... It will go directly to the selected course's notes box."
+                  placeholder="Write note description here... It will go directly to the selected course's notes list."
                 />
               </label>
             )}

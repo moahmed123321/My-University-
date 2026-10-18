@@ -4,14 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { fmtDate, linkType, sortItems } from "@/lib/helpers";
+import { fmtDate, fmtDateTime, linkType, sortItems } from "@/lib/helpers";
 import { removeRow, toggleDone } from "@/lib/db";
 import { Card, Empty, PageHeader } from "@/components/ui";
 import ItemTable from "@/components/ItemTable";
 import EditCourseModal from "@/components/EditCourseModal";
 import EditNoteModal from "@/components/EditNoteModal";
 import AddModal from "@/components/AddModal";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Calendar, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -221,58 +221,76 @@ export default function CourseDetail() {
                 No notes for this course yet. Click the + button above, or use "Quick Add" on the dashboard to add a note to this course.
               </Empty>
             ) : (
-              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+              <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70 bg-card">
                 {notes.map((note) => (
-                  <div
+                  <li
                     key={note.id}
-                    className="flex flex-col justify-between rounded-xl border border-border/80 bg-card p-4 shadow-xs transition hover:border-border hover:shadow-sm"
+                    className="group flex flex-col gap-3 p-4 transition-colors hover:bg-muted/30 sm:flex-row sm:items-start sm:justify-between"
                   >
-                    <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <h4 className="font-semibold text-foreground text-sm leading-snug break-words">
-                          {note.title}
-                        </h4>
-                        <div className="flex shrink-0 items-center gap-1">
-                          <button
-                            type="button"
-                            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                            onClick={() => setEditingNote(note)}
-                            aria-label="Edit note"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            onClick={async () => {
-                              if (await removeRow("notes", note.id, "Delete this note?")) {
-                                load();
-                              }
-                            }}
-                            aria-label="Delete note"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      {/* Address / Title */}
+                      <div className="flex items-start gap-2.5">
+                        <span
+                          className="mt-1 h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: course.color || "#0f766e" }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-sm font-semibold text-foreground break-words leading-snug">
+                            {note.title}
+                          </h4>
+                          {/* Description */}
+                          {note.content ? (
+                            <p className="mt-1.5 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground break-words">
+                              {note.content}
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-xs italic text-muted-foreground/50">
+                              No description
+                            </p>
+                          )}
                         </div>
                       </div>
-                      {note.created_at && (
-                        <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          {fmtDate(note.created_at)}
-                        </p>
-                      )}
-                      {note.content ? (
-                        <div className="mt-3 whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground break-words border border-border/40">
-                          {note.content}
-                        </div>
-                      ) : (
-                        <p className="mt-2.5 text-xs italic text-muted-foreground/50">
-                          Empty note space
-                        </p>
-                      )}
                     </div>
-                  </div>
+
+                    {/* Date & Actions */}
+                    <div className="flex shrink-0 items-center justify-between gap-3 pl-4.5 pt-1 sm:pl-0 sm:pt-0 sm:flex-col sm:items-end sm:gap-2">
+                      {note.created_at && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/70 px-2.5 py-1 text-[11px] font-medium text-muted-foreground tabular-nums">
+                          <Calendar className="h-3 w-3" />
+                          {fmtDateTime(note.created_at)}
+                        </span>
+                      )}
+
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          onClick={() => setEditingNote(note)}
+                          aria-label="Edit note"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          onClick={async () => {
+                            if (await removeRow("notes", note.id, "Delete this note?")) {
+                              load();
+                            }
+                          }}
+                          aria-label="Delete note"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </Card>
         </TabsContent>

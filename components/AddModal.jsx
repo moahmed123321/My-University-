@@ -34,8 +34,8 @@ const FORMS = {
     needsCourse: true,
     fields: [
       courseField(false),
-      { name: "title", label: "Title", type: "text", required: true },
-      { name: "content", label: "Note space / content", type: "textarea" },
+      { name: "title", label: "Title / Address", type: "text", required: true },
+      { name: "content", label: "Description", type: "textarea" },
     ],
   },
   topic: {

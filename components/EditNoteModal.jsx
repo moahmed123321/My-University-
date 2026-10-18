@@ -84,24 +84,24 @@ export default function EditNoteModal({ note, courses = [], onClose, onSaved, on
         )}
 
         <div className="space-y-1.5">
-          <Label htmlFor="edit-note-title">Title</Label>
+          <Label htmlFor="edit-note-title">Title / Address</Label>
           <Input
             id="edit-note-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Note title"
+            placeholder="Note title / address"
             required
             autoFocus
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="edit-note-content">Note space / content</Label>
+          <Label htmlFor="edit-note-content">Description</Label>
           <Textarea
             id="edit-note-content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Write your note here..."
+            placeholder="Write note description here..."
             className="min-h-[140px] leading-relaxed"
           />
         </div>
@@ -139,3 +139,4 @@ export default function EditNoteModal({ note, courses = [], onClose, onSaved, on
     </Modal>
   );
 }
+
