@@ -100,6 +100,12 @@ const Icon = ({ name, size = 16 }) => {
     next: <path d="M9 6l6 6-6 6" />,
     plus: <path d="M12 5v14M5 12h14" />,
     check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+    user: (
+      <>
+        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </>
+    ),
   }[name];
   return (
     <svg
@@ -243,6 +249,7 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
   const past = isToday && e <= nowMin;
   const first = i === 0;
   const last = i === n - 1;
+  const instructor = l.courses?.professor || l.courses?.instructor;
 
   return (
     <div
@@ -319,9 +326,17 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
         }}
       >
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <b className="text-sm font-semibold leading-snug">
-            {l.courses?.name}
-          </b>
+          <div>
+            <b className="text-sm font-semibold leading-snug">
+              {l.courses?.name}
+            </b>
+            {instructor ? (
+              <div className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Icon name="user" size={12} />
+                <span>{instructor}</span>
+              </div>
+            ) : null}
+          </div>
           <span className="flex gap-1.5">
             {now ? (
               <Pill
@@ -646,7 +661,7 @@ export default function OverviewPage() {
       supabase.from("courses").select("*").order("name"),
       supabase
         .from("lectures")
-        .select("*, courses(id, name, code, color)")
+        .select("*, courses(id, name, code, color, professor)")
         .order("start_time"),
       supabase.from(TASKS.table).select("*").limit(50),
       supabase.from(ASSIGNMENTS.table).select("*").limit(50),

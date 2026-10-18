@@ -29,6 +29,7 @@ import {
   GraduationCap,
   GripVertical,
   Calendar,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -207,10 +208,20 @@ function GoogleCalendarEvent({
         )}
       </div>
 
-      {lecture.room && lecture.height >= 52 && (
-        <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground/90">
-          <MapPin className="h-2.5 w-2.5 shrink-0 text-muted-foreground/70" />
-          <span className="truncate">{lecture.room}</span>
+      {(lecture.courses?.professor || lecture.room) && lecture.height >= 48 && (
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground/90">
+          {lecture.courses?.professor && (
+            <div className="flex items-center gap-1 min-w-0" title={`Instructor: ${lecture.courses.professor}`}>
+              <User className="h-2.5 w-2.5 shrink-0 text-muted-foreground/70" />
+              <span className="truncate">{lecture.courses.professor}</span>
+            </div>
+          )}
+          {lecture.room && (
+            <div className="flex items-center gap-1 min-w-0" title={`Room: ${lecture.room}`}>
+              <MapPin className="h-2.5 w-2.5 shrink-0 text-muted-foreground/70" />
+              <span className="truncate">{lecture.room}</span>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -346,7 +357,7 @@ export default function SchedulePage() {
       supabase.from("courses").select("*").order("name"),
       supabase
         .from("lectures")
-        .select("*, courses(id, name, code, color)")
+        .select("*, courses(id, name, code, color, professor)")
         .order("start_time"),
       supabase
         .from("exams")
