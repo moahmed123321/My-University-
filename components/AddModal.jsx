@@ -31,11 +31,11 @@ const FORMS = {
   note: {
     title: "Add note",
     table: "notes",
-    needsCourse: false,
+    needsCourse: true,
     fields: [
-      courseField(true),
+      courseField(false),
       { name: "title", label: "Title", type: "text", required: true },
-      { name: "content", label: "Note", type: "textarea" },
+      { name: "content", label: "Note space / content", type: "textarea" },
     ],
   },
   topic: {

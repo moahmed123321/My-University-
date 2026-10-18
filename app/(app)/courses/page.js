@@ -105,7 +105,7 @@ const getInitials = (name = "") =>
 /* ─────────────────────────────────────────────────────────────────────────
    COURSE CARD
 ───────────────────────────────────────────────────────────────────────── */
-function CourseCard({ c, upcoming, onEdit }) {
+function CourseCard({ c, upcoming, noteCount, onEdit }) {
   const accentColor = courseColor(c);
   const initials = getInitials(c.name);
   const instructor = c.professor || c.instructor;
@@ -172,9 +172,9 @@ function CourseCard({ c, upcoming, onEdit }) {
             </>
           )}
 
-          {/* upcoming badge (top-left) */}
-          <div className="z-10 flex items-center justify-between">
-            {upcoming != null && upcoming > 0 ? (
+          {/* upcoming & notes badges (top-left) */}
+          <div className="z-10 flex flex-wrap items-center gap-1.5">
+            {upcoming != null && upcoming > 0 && (
               <span
                 className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold shadow-xs"
                 style={{
@@ -185,8 +185,18 @@ function CourseCard({ c, upcoming, onEdit }) {
               >
                 {upcoming} upcoming
               </span>
-            ) : (
-              <span />
+            )}
+            {noteCount != null && noteCount > 0 && (
+              <span
+                className="rounded-full px-2 py-0.5 text-[11px] font-medium shadow-xs"
+                style={{
+                  backgroundColor: "hsl(var(--card))",
+                  color: "hsl(var(--foreground))",
+                  border: "1px solid color-mix(in srgb, hsl(var(--foreground)) 15%, transparent)",
+                }}
+              >
+                {noteCount} {noteCount === 1 ? "note" : "notes"}
+              </span>
             )}
           </div>
 
@@ -269,14 +279,16 @@ function CourseCard({ c, upcoming, onEdit }) {
 export default function CoursesPage() {
   const [courses, setCourses] = useState([]);
   const [counts, setCounts] = useState(null);
+  const [noteCounts, setNoteCounts] = useState(null);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
 
   const load = useCallback(async () => {
-    const [c, t] = await Promise.all([
+    const [c, t, n] = await Promise.all([
       supabase.from("courses").select("*").order("name"),
       supabase.from(TASKS.table).select(`${TASKS.course}, ${TASKS.done}`),
+      supabase.from("notes").select("id, course_id"),
     ]);
     setCourses(c.data || []);
     if (t.error || !t.data) {
@@ -288,6 +300,17 @@ export default function CoursesPage() {
           m[r[TASKS.course]] = (m[r[TASKS.course]] || 0) + 1;
       });
       setCounts(m);
+    }
+    if (n.error || !n.data) {
+      setNoteCounts(null);
+    } else {
+      const nm = {};
+      (n.data || []).forEach((r) => {
+        if (r.course_id) {
+          nm[r.course_id] = (nm[r.course_id] || 0) + 1;
+        }
+      });
+      setNoteCounts(nm);
     }
     setLoading(false);
   }, []);
@@ -338,6 +361,7 @@ export default function CoursesPage() {
               key={c.id}
               c={c}
               upcoming={counts ? counts[c.id] || 0 : null}
+              noteCount={noteCounts ? noteCounts[c.id] || 0 : 0}
               onEdit={() => setEditing(c)}
             />
           ))}

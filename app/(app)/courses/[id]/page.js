@@ -9,8 +9,9 @@ import { removeRow, toggleDone } from "@/lib/db";
 import { Card, Empty, PageHeader } from "@/components/ui";
 import ItemTable from "@/components/ItemTable";
 import EditCourseModal from "@/components/EditCourseModal";
+import EditNoteModal from "@/components/EditNoteModal";
 import AddModal from "@/components/AddModal";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -22,23 +23,27 @@ export default function CourseDetail() {
   const [tasks, setTasks] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [materials, setMaterials] = useState([]);
+  const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [editingNote, setEditingNote] = useState(null);
   const [adding, setAdding] = useState(null);
 
   const load = useCallback(async () => {
-    const [c, tp, t, a, m] = await Promise.all([
+    const [c, tp, t, a, m, n] = await Promise.all([
       supabase.from("courses").select("*").eq("id", id).maybeSingle(),
       supabase.from("topics").select("*").eq("course_id", id).order("created_at", { ascending: false }),
       supabase.from("tasks").select("*").eq("course_id", id),
       supabase.from("assignments").select("*").eq("course_id", id),
       supabase.from("materials").select("*").eq("course_id", id).order("created_at", { ascending: false }),
+      supabase.from("notes").select("*").eq("course_id", id).order("created_at", { ascending: false }),
     ]);
     setCourse(c.data);
     setTopics(tp.data || []);
     setTasks(t.data || []);
     setAssignments(a.data || []);
     setMaterials(m.data || []);
+    setNotes(n.data || []);
     setLoading(false);
   }, [id]);
 
@@ -95,6 +100,7 @@ export default function CourseDetail() {
         <div className="mb-5 overflow-x-auto pb-1">
           <TabsList className="h-auto min-w-max gap-1 bg-muted/70 p-1.5">
             <TabsTrigger value="topics">Topics <span className="ml-1 text-xs text-muted-foreground">{topics.length}</span></TabsTrigger>
+            <TabsTrigger value="notes">Notes <span className="ml-1 text-xs text-muted-foreground">{notes.length}</span></TabsTrigger>
             <TabsTrigger value="materials">Materials <span className="ml-1 text-xs text-muted-foreground">{materials.length}</span></TabsTrigger>
             <TabsTrigger value="tasks">Tasks <span className="ml-1 text-xs text-muted-foreground">{openTasks.length}</span></TabsTrigger>
             <TabsTrigger value="assignments">Assignments <span className="ml-1 text-xs text-muted-foreground">{openAssignments.length}</span></TabsTrigger>
@@ -194,8 +200,93 @@ export default function CourseDetail() {
           )}
         </Card>
         </TabsContent>
+
+        <TabsContent value="notes">
+          <Card
+            title="Course notes"
+            action={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="Add note"
+                onClick={() => setAdding("note")}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            }
+          >
+            {notes.length === 0 ? (
+              <Empty>
+                No notes for this course yet. Click the + button above, or use "Quick Add" on the dashboard to add a note to this course.
+              </Empty>
+            ) : (
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                {notes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="flex flex-col justify-between rounded-xl border border-border/80 bg-card p-4 shadow-xs transition hover:border-border hover:shadow-sm"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-semibold text-foreground text-sm leading-snug break-words">
+                          {note.title}
+                        </h4>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            onClick={() => setEditingNote(note)}
+                            aria-label="Edit note"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            onClick={async () => {
+                              if (await removeRow("notes", note.id, "Delete this note?")) {
+                                load();
+                              }
+                            }}
+                            aria-label="Delete note"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      {note.created_at && (
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          {fmtDate(note.created_at)}
+                        </p>
+                      )}
+                      {note.content ? (
+                        <div className="mt-3 whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground break-words border border-border/40">
+                          {note.content}
+                        </div>
+                      ) : (
+                        <p className="mt-2.5 text-xs italic text-muted-foreground/50">
+                          Empty note space
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </TabsContent>
       </Tabs>
       {editing && <EditCourseModal course={course} onClose={() => setEditing(false)} onSaved={load} />}
+      {editingNote && (
+        <EditNoteModal
+          note={editingNote}
+          courses={[course]}
+          onClose={() => setEditingNote(null)}
+          onSaved={load}
+          onDeleted={load}
+        />
+      )}
       {adding && <AddModal type={adding} courses={[course]} defaultCourseId={course.id} onClose={() => setAdding(null)} onSaved={load} />}
     </div>
   );

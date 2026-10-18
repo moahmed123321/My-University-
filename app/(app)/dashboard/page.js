@@ -508,7 +508,7 @@ const FORMS = {
   },
   note: {
     title: "Add Note",
-    nameLabel: "Name",
+    nameLabel: "Note title",
     cta: "Add note",
     ok: "Note added",
   },
@@ -531,6 +531,7 @@ function QuickModal({
   const f = FORMS[type];
   const todayIso = isoOf(new Date());
   const [name, setName] = useState("");
+  const [content, setContent] = useState("");
   const [course, setCourse] = useState(
     String(defaultCourseId ?? courses[0]?.id ?? ""),
   );
@@ -548,7 +549,7 @@ function QuickModal({
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return setErr("Please enter a name.");
+    if (!name.trim()) return setErr("Please enter a title.");
     setSaving(true);
     setErr("");
     let row;
@@ -563,7 +564,11 @@ function QuickModal({
     else if (type === "note")
       row = {
         table: NOTES.table,
-        data: { [NOTES.name]: name.trim(), [NOTES.course]: course },
+        data: {
+          [NOTES.name]: name.trim(),
+          [NOTES.course]: course,
+          content: content.trim() || null,
+        },
       };
     else
       row = {
@@ -578,7 +583,12 @@ function QuickModal({
     const { error } = await supabase.from(row.table).insert(row.data);
     setSaving(false);
     if (error) return setErr(error.message);
-    onSaved(f.ok);
+    const targetCourse = courses.find((c) => String(c.id) === String(course));
+    onSaved(
+      type === "note" && targetCourse
+        ? `Note added to ${targetCourse.name}`
+        : f.ok,
+    );
   };
 
   const liveName = courses.find(
@@ -606,17 +616,6 @@ function QuickModal({
         ) : (
           <>
             <label className="block space-y-1.5 text-sm font-medium">
-              {f.nameLabel}
-              <input
-                autoFocus
-                className="input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={type === "note" ? "Untitled" : ""}
-              />
-            </label>
-
-            <label className="block space-y-1.5 text-sm font-medium">
               Course
               <select
                 className="input"
@@ -641,6 +640,29 @@ function QuickModal({
                 </span>
               ) : null}
             </label>
+
+            <label className="block space-y-1.5 text-sm font-medium">
+              {f.nameLabel}
+              <input
+                autoFocus
+                className="input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={type === "note" ? "Title (e.g. Chapter summary, Formula...)" : ""}
+              />
+            </label>
+
+            {type === "note" && (
+              <label className="block space-y-1.5 text-sm font-medium">
+                Note space / content
+                <textarea
+                  className="input min-h-[110px] resize-y py-2 text-sm leading-relaxed"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Write your note here... It will go directly to the selected course's notes box."
+                />
+              </label>
+            )}
 
             {type === "assignment" && (
               <label className="block space-y-1.5 text-sm font-medium">
