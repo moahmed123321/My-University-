@@ -257,36 +257,37 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
   const first = i === 0;
   const last = i === n - 1;
   const instructor = l.courses?.professor || l.courses?.instructor;
+  const isExam = l.itemType === "exam";
 
   return (
     <div
-      className="grid grid-cols-[54px_14px_1fr] gap-2 py-1.5 sm:grid-cols-[68px_16px_1fr] sm:gap-3"
+      className="grid grid-cols-[48px_12px_minmax(0,1fr)] gap-2 py-1.5 sm:grid-cols-[62px_14px_minmax(0,1fr)] sm:gap-3 min-w-0 w-full"
       style={{ "--c": c }}
     >
       {/* ─── Left side: Time ─── */}
       <div
         className={cn(
-          "pt-2 text-right leading-tight select-none",
+          "pt-2 text-right leading-tight select-none min-w-0 shrink-0",
           past && "opacity-50"
         )}
       >
         <span
           className={cn(
-            "block text-[13px] sm:text-[14px] font-bold tabular-nums tracking-tight",
+            "block text-[12px] sm:text-[13.5px] font-bold tabular-nums tracking-tight",
             now ? "text-primary font-extrabold" : "text-foreground"
           )}
         >
           {fmtTime(l.start_time)}
         </span>
         {l.end_time && (
-          <span className="block text-[11px] sm:text-[12px] font-medium text-muted-foreground/80 tabular-nums mt-0.5">
+          <span className="block text-[10.5px] sm:text-[11.5px] font-medium text-muted-foreground/80 tabular-nums mt-0.5">
             {fmtTime(l.end_time)}
           </span>
         )}
       </div>
 
       {/* ─── Rail + Dot ─── */}
-      <div className="relative">
+      <div className="relative shrink-0">
         {!(first && last) && (
           <span
             className="absolute left-1/2 w-0.5 -translate-x-1/2 bg-border/60"
@@ -333,7 +334,7 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
 
       {/* ─── Right side: Card ─── */}
       <div
-        className="rounded-2xl p-3 sm:p-3.5 transition-all shadow-xs"
+        className="min-w-0 w-full overflow-hidden rounded-2xl p-3 sm:p-3.5 transition-all shadow-xs"
         style={{
           background: mix(c, now ? 14 : 7),
           border: `1px solid ${mix(c, now ? 45 : 22, "hsl(var(--border))")}`,
@@ -342,13 +343,17 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
         }}
       >
         {/* Top: Title & Status Badge */}
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-[14px] sm:text-[15px] font-bold text-foreground leading-snug">
+        <div className="flex items-start justify-between gap-2 min-w-0 w-full">
+          <h3 className="text-[13.5px] sm:text-[14.5px] font-bold text-foreground leading-snug min-w-0 flex-1 break-words">
             {l.courses?.name}
           </h3>
 
-          <div className="shrink-0">
-            {now ? (
+          <div className="shrink-0 whitespace-nowrap">
+            {isExam ? (
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                🎓 Exam
+              </span>
+            ) : now ? (
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold"
                 style={{
@@ -376,29 +381,29 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
         </div>
 
         {/* Bottom: Structure (Instructor) & Place (Room) */}
-        {(instructor || l.room || (l.kind && l.kind !== "Lecture")) && (
-          <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
+        {(instructor || l.room || (l.kind && l.kind !== "Lecture" && !isExam)) && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground min-w-0 w-full">
             {instructor && (
-              <div className="flex items-center gap-1.5 font-medium min-w-0" title={`Instructor: ${instructor}`}>
+              <div className="flex items-center gap-1.5 font-medium min-w-0 max-w-full" title={`Instructor: ${instructor}`}>
                 <Icon name="user" size={12} className="shrink-0 text-muted-foreground/75" />
-                <span className="truncate">{instructor}</span>
+                <span className="break-words">{instructor}</span>
               </div>
             )}
             {instructor && l.room && (
               <span className="text-muted-foreground/40 font-normal">·</span>
             )}
             {l.room && (
-              <div className="flex items-center gap-1.5 font-medium min-w-0" title={`Place: ${l.room}`}>
+              <div className="flex items-center gap-1.5 font-medium min-w-0 max-w-full" title={`Place: ${l.room}`}>
                 <Icon name="pin" size={12} className="shrink-0 text-muted-foreground/75" />
-                <span className="truncate">{l.room}</span>
+                <span className="break-words">{l.room}</span>
               </div>
             )}
-            {l.kind && l.kind !== "Lecture" && (
+            {l.kind && l.kind !== "Lecture" && !isExam && (
               <>
                 {(instructor || l.room) && (
                   <span className="text-muted-foreground/40 font-normal">·</span>
                 )}
-                <span className="rounded px-1.5 py-0.2 text-[9.5px] font-bold uppercase tracking-wider bg-muted text-muted-foreground">
+                <span className="rounded px-1.5 py-0.2 text-[9.5px] font-bold uppercase tracking-wider bg-muted text-muted-foreground shrink-0">
                   {l.kind}
                 </span>
               </>
@@ -673,6 +678,7 @@ export default function OverviewPage() {
   const router = useRouter();
   const [courses, setCourses] = useState([]);
   const [lectures, setLectures] = useState([]);
+  const [exams, setExams] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [assigns, setAssigns] = useState([]);
   const [toast, setToast] = useState("");
@@ -682,7 +688,7 @@ export default function OverviewPage() {
   const [now, setNow] = useState(() => new Date());
 
   const load = useCallback(async () => {
-    const [c, l, t, a] = await Promise.all([
+    const [c, l, t, a, e] = await Promise.all([
       supabase.from("courses").select("*").order("name"),
       supabase
         .from("lectures")
@@ -690,11 +696,16 @@ export default function OverviewPage() {
         .order("start_time"),
       supabase.from(TASKS.table).select("*").limit(50),
       supabase.from(ASSIGNMENTS.table).select("*").limit(50),
+      supabase
+        .from("exams")
+        .select("*, courses(id, name, code, color, professor)")
+        .order("exam_date"),
     ]);
     setCourses(c.data || []);
     setLectures(l.data || []);
     setTasks(t.error ? [] : t.data || []);
     setAssigns(a.error ? [] : a.data || []);
+    setExams(e.error ? [] : e.data || []);
     setLoading(false);
   }, []);
 
@@ -715,15 +726,26 @@ export default function OverviewPage() {
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const isToday = off === 0;
 
-  const dayRows = useMemo(
-    () =>
-      lectures
-        .filter((l) => l.day_of_week === sel.getDay())
-        .sort((a, b) =>
-          String(a.start_time).localeCompare(String(b.start_time)),
-        ),
-    [lectures, sel],
-  );
+  const dayRows = useMemo(() => {
+    const selIso = isoOf(sel);
+    const dayLectures = lectures
+      .filter((l) => l.day_of_week === sel.getDay())
+      .map((l) => ({ ...l, itemType: "lecture" }));
+    const dayExams = exams
+      .filter((x) => x.exam_date === selIso)
+      .map((x) => ({
+        ...x,
+        itemType: "exam",
+        kind: "Exam",
+        start_time: x.exam_time || "09:00:00",
+        end_time: x.exam_time
+          ? `${String(Math.min(parseInt(x.exam_time.split(":")[0], 10) + 2, 23)).padStart(2, "0")}:${x.exam_time.split(":")[1] || "00"}`
+          : "11:00:00",
+      }));
+    return [...dayLectures, ...dayExams].sort((a, b) =>
+      String(a.start_time).localeCompare(String(b.start_time)),
+    );
+  }, [lectures, exams, sel]);
   const upNextId = isToday
     ? dayRows.find((l) => toMin(l.start_time) > nowMin)?.id
     : null;
@@ -920,10 +942,7 @@ export default function OverviewPage() {
             </div>
 
             {/* timeline */}
-            <div
-              className="border-t px-3 py-3 sm:px-5"
-              style={{ minHeight: Math.max(dayRows.length, 1) * 84 + 24 }}
-            >
+            <div className="border-t px-2.5 py-3 sm:px-5 min-w-0 w-full overflow-hidden">
               {dayRows.length === 0 ? (
                 <div className="px-3 py-7 text-center text-muted-foreground">
                   <b className="mb-1 block text-foreground">
