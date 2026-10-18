@@ -7,6 +7,7 @@ import { DAY_NAMES, DAY_ORDER, fmtTime } from "@/lib/helpers";
 import AddModal from "@/components/AddModal";
 import { FocusButton } from "@/components/PomodoroTimer";
 import { getLectureColor } from "@/lib/lectureColors";
+import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ *
  * CONFIG: Learning + Assignments cards.
@@ -245,7 +246,7 @@ function QuickAdd({ onPick }) {
 }
 
 /* ---------- timeline row ---------- */
-const DOT = 20; // px from the top of a row to the centre of the dot
+const DOT = 18; // px from the top of a row to the centre of the dot
 
 function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
   const c = getLectureColor(l, l.courses?.color);
@@ -259,10 +260,32 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
 
   return (
     <div
-      className="grid grid-cols-[14px_1fr] gap-2.5 py-1 sm:grid-cols-[16px_1fr] sm:gap-3.5"
+      className="grid grid-cols-[54px_14px_1fr] gap-2 py-1.5 sm:grid-cols-[68px_16px_1fr] sm:gap-3"
       style={{ "--c": c }}
     >
-      {/* rail + dot */}
+      {/* ─── Left side: Time ─── */}
+      <div
+        className={cn(
+          "pt-2 text-right leading-tight select-none",
+          past && "opacity-50"
+        )}
+      >
+        <span
+          className={cn(
+            "block text-[13px] sm:text-[14px] font-bold tabular-nums tracking-tight",
+            now ? "text-primary font-extrabold" : "text-foreground"
+          )}
+        >
+          {fmtTime(l.start_time)}
+        </span>
+        {l.end_time && (
+          <span className="block text-[11px] sm:text-[12px] font-medium text-muted-foreground/80 tabular-nums mt-0.5">
+            {fmtTime(l.end_time)}
+          </span>
+        )}
+      </div>
+
+      {/* ─── Rail + Dot ─── */}
       <div className="relative">
         {!(first && last) && (
           <span
@@ -308,30 +331,26 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
         />
       </div>
 
-      {/* card */}
+      {/* ─── Right side: Card ─── */}
       <div
         className="rounded-2xl p-3 sm:p-3.5 transition-all shadow-xs"
         style={{
-          background: mix(c, now ? 12 : 6),
-          border: `1px solid ${mix(c, now ? 40 : 20, "hsl(var(--border))")}`,
+          background: mix(c, now ? 14 : 7),
+          border: `1px solid ${mix(c, now ? 45 : 22, "hsl(var(--border))")}`,
           borderLeft: `4px solid ${c}`,
-          opacity: past ? 0.65 : 1,
+          opacity: past ? 0.7 : 1,
         }}
       >
-        {/* Top: Minimal Time & Status Badge */}
-        <div className="flex items-center justify-between gap-2 pb-1.5 mb-1.5 border-b border-border/30">
-          <div className="flex items-center gap-1.5 text-xs font-semibold tabular-nums text-foreground/80">
-            <Icon name="clock" size={12} />
-            <span>
-              {fmtTime(l.start_time)}
-              {l.end_time ? ` – ${fmtTime(l.end_time)}` : ""}
-            </span>
-          </div>
+        {/* Top: Title & Status Badge */}
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-[14px] sm:text-[15px] font-bold text-foreground leading-snug">
+            {l.courses?.name}
+          </h3>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="shrink-0">
             {now ? (
               <span
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold"
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold"
                 style={{
                   background: mix(BRAND, 15),
                   color: BRAND,
@@ -343,7 +362,7 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
               </span>
             ) : upNext ? (
               <span
-                className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10.5px] font-bold"
                 style={{
                   background: mix(INFO, 15),
                   color: INFO,
@@ -353,26 +372,15 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
                 Up next
               </span>
             ) : null}
-
-            {l.kind && l.kind !== "Lecture" ? (
-              <span className="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-muted text-muted-foreground">
-                {l.kind}
-              </span>
-            ) : null}
           </div>
         </div>
 
-        {/* Middle: Lecture / Course Title */}
-        <h3 className="text-[14px] sm:text-[15px] font-bold text-foreground leading-snug">
-          {l.courses?.name}
-        </h3>
-
         {/* Bottom: Structure (Instructor) & Place (Room) */}
-        {(instructor || l.room) && (
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        {(instructor || l.room || (l.kind && l.kind !== "Lecture")) && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
             {instructor && (
               <div className="flex items-center gap-1.5 font-medium min-w-0" title={`Instructor: ${instructor}`}>
-                <Icon name="user" size={12} />
+                <Icon name="user" size={12} className="shrink-0 text-muted-foreground/75" />
                 <span className="truncate">{instructor}</span>
               </div>
             )}
@@ -381,9 +389,19 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
             )}
             {l.room && (
               <div className="flex items-center gap-1.5 font-medium min-w-0" title={`Place: ${l.room}`}>
-                <Icon name="pin" size={12} />
+                <Icon name="pin" size={12} className="shrink-0 text-muted-foreground/75" />
                 <span className="truncate">{l.room}</span>
               </div>
+            )}
+            {l.kind && l.kind !== "Lecture" && (
+              <>
+                {(instructor || l.room) && (
+                  <span className="text-muted-foreground/40 font-normal">·</span>
+                )}
+                <span className="rounded px-1.5 py-0.2 text-[9.5px] font-bold uppercase tracking-wider bg-muted text-muted-foreground">
+                  {l.kind}
+                </span>
+              </>
             )}
           </div>
         )}
