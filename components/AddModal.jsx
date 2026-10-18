@@ -113,15 +113,15 @@ const FORMS = {
   },
 };
 
-export default function AddModal({ type, courses = [], defaultCourseId = "", onClose, onSaved }) {
+export default function AddModal({ type, courses = [], defaultCourseId = "", initialValues = {}, onClose, onSaved }) {
   const cfg = FORMS[type];
   const [values, setValues] = useState(() => {
     const v = {};
     cfg.fields.forEach((f) => {
-      v[f.name] = f.default ?? "";
+      v[f.name] = initialValues[f.name] ?? f.default ?? "";
     });
     if (defaultCourseId) v.course_id = defaultCourseId;
-    return v;
+    return { ...v, ...initialValues };
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
