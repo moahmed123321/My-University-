@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { DAY_NAMES, DAY_ORDER } from "@/lib/helpers";
+import { setStoredLectureColor } from "@/lib/lectureColors";
 import Modal from "./Modal";
 
 const courseField = (optional) => ({
@@ -88,6 +89,7 @@ const FORMS = {
       { name: "start_time", label: "Starts", type: "time", required: true },
       { name: "end_time", label: "Ends", type: "time" },
       { name: "room", label: "Room / Hall", type: "text" },
+      { name: "color", label: "Color", type: "color", default: "#2563eb" },
     ],
   },
   exam: {
@@ -144,12 +146,24 @@ export default function AddModal({ type, courses = [], defaultCourseId = "", ini
       if (v !== null && f.type === "url" && !/^https?:\/\//i.test(v)) v = "https://" + v;
       payload[f.name] = v;
     });
-    const { error } = await supabase.from(cfg.table).insert(payload);
+
+    let customLectureColor = null;
+    if (cfg.table === "lectures" && payload.color) {
+      customLectureColor = payload.color;
+      delete payload.color;
+    }
+
+    const { data, error } = await supabase.from(cfg.table).insert(payload).select().maybeSingle();
     setSaving(false);
     if (error) {
       setError(error.message);
       return;
     }
+
+    if (data?.id && customLectureColor) {
+      setStoredLectureColor(data.id, customLectureColor);
+    }
+
     if (onSaved) onSaved();
     onClose();
   }

@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { DAY_NAMES, DAY_ORDER, fmtTime } from "@/lib/helpers";
 import AddModal from "@/components/AddModal";
 import { FocusButton } from "@/components/PomodoroTimer";
+import { getLectureColor } from "@/lib/lectureColors";
 
 /* ------------------------------------------------------------------ *
  * CONFIG: Learning + Assignments cards.
@@ -235,7 +236,7 @@ function QuickAdd({ onPick }) {
 const DOT = 18; // px from the top of a row to the centre of the dot
 
 function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
-  const c = courseColor(l.course_id);
+  const c = getLectureColor(l, l.courses?.color);
   const s = toMin(l.start_time);
   const e = l.end_time ? toMin(l.end_time) : s + 60;
   const now = isToday && s <= nowMin && nowMin < e;
@@ -645,7 +646,7 @@ export default function OverviewPage() {
       supabase.from("courses").select("*").order("name"),
       supabase
         .from("lectures")
-        .select("*, courses(name, code)")
+        .select("*, courses(id, name, code, color)")
         .order("start_time"),
       supabase.from(TASKS.table).select("*").limit(50),
       supabase.from(ASSIGNMENTS.table).select("*").limit(50),

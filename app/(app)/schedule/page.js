@@ -7,51 +7,26 @@ import { removeRow } from "@/lib/db";
 import { Empty } from "@/components/ui";
 import AddModal from "@/components/AddModal";
 import EditLectureModal from "@/components/EditLectureModal";
+import EditExamModal from "@/components/EditExamModal";
+import {
+  getLectureColor,
+  LECTURE_COLOR_PRESETS,
+} from "@/lib/lectureColors";
 import {
   CalendarDays,
   Clock,
   Plus,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   MapPin,
   Pencil,
   Trash2,
   GraduationCap,
+  GripVertical,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-/* ---------- Design Tokens & Color Helpers ---------- */
-const BRAND = "#c8102e";
-const INFO = "#2563eb"; // Labs
-const WARN = "#d97706"; // Tutorials / Sections
-const COURSE_COLORS = [
-  "#2563eb", // blue
-  "#7c3aed", // violet
-  "#0891b2", // cyan
-  "#059669", // emerald
-  "#d97706", // amber
-  "#c8102e", // crimson
-  "#db2777", // pink
-  "#475569", // slate
-];
-
-const courseColor = (id, fallbackColor) => {
-  if (fallbackColor) return fallbackColor;
-  const n = Number(id);
-  const i = Number.isFinite(n)
-    ? n
-    : String(id || "")
-        .split("")
-        .reduce((a, c) => a + c.charCodeAt(0), 0);
-  return COURSE_COLORS[Math.abs(i) % COURSE_COLORS.length];
-};
-
-const kindColor = (kind, courseCol) => {
-  const k = String(kind || "").toLowerCase();
-  if (k.startsWith("lab")) return INFO;
-  if (k.startsWith("tut") || k.startsWith("sec")) return WARN;
-  return courseCol || BRAND;
-};
 
 const mix = (c, pct, base = "hsl(var(--card))") =>
   `color-mix(in srgb, ${c} ${pct}%, ${base})`;
@@ -74,15 +49,10 @@ function formatHourLabel(h) {
   return `${h - 12} PM`;
 }
 
-// 12-hour formatted time (e.g. "10:30 AM")
-function formatDisplayTime(t) {
-  if (!t) return "";
-  const [hStr, mStr] = t.split(":");
-  let h = parseInt(hStr, 10);
-  const m = mStr ? mStr.slice(0, 2) : "00";
-  const ampm = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
-  return `${h}:${m} ${ampm}`;
+function formatMinutesToTime(min) {
+  const h = String(Math.floor(min / 60)).padStart(2, "0");
+  const m = String(min % 60).padStart(2, "0");
+  return `${h}:${m}:00`;
 }
 
 const HOUR_HEIGHT = 64; // px per hour (approx 1.06 px per minute)
@@ -91,7 +61,6 @@ const HOUR_HEIGHT = 64; // px per hour (approx 1.06 px per minute)
 function computeDayLayout(events, startHour) {
   if (!events || events.length === 0) return [];
 
-  // 1. Convert start_time and end_time to minutes
   const parsed = events.map((ev) => {
     const [sH, sM] = (ev.start_time || "08:00").split(":").map(Number);
     const startMin = sH * 60 + (sM || 0);
@@ -111,10 +80,8 @@ function computeDayLayout(events, startHour) {
     };
   });
 
-  // 2. Sort by start time, then longer duration first
   parsed.sort((a, b) => a.startMin - b.startMin || b.duration - a.duration);
 
-  // 3. Cluster mutually overlapping events together
   const clusters = [];
   let currentCluster = [];
   let clusterEnd = -1;
@@ -131,10 +98,9 @@ function computeDayLayout(events, startHour) {
   }
   if (currentCluster.length) clusters.push(currentCluster);
 
-  // 4. In each cluster, assign columns (side-by-side like Google Calendar)
   const result = [];
   for (const cluster of clusters) {
-    const columns = []; // tracks end time of each column
+    const columns = [];
     for (const ev of cluster) {
       let placedCol = -1;
       for (let i = 0; i < columns.length; i++) {
@@ -154,7 +120,7 @@ function computeDayLayout(events, startHour) {
     const totalCols = columns.length;
     for (const ev of cluster) {
       const top = ((ev.startMin - startHour * 60) / 60) * HOUR_HEIGHT;
-      const height = Math.max(((ev.endMin - ev.startMin) / 60) * HOUR_HEIGHT, 32);
+      const height = Math.max(((ev.endMin - ev.startMin) / 60) * HOUR_HEIGHT, 34);
       const widthPct = 100 / totalCols;
       const leftPct = ev.colIndex * widthPct;
 
@@ -171,39 +137,50 @@ function computeDayLayout(events, startHour) {
   return result;
 }
 
-/* ---------- Event Card Component (Google Calendar Style) ---------- */
+/* ---------- Google Calendar Event Component with Mouse Drag-and-Drop ---------- */
 function GoogleCalendarEvent({
   lecture,
+  isDragging,
+  onDragStart,
+  onDragEnd,
   onClick,
   onDelete,
 }) {
-  const cColor = courseColor(lecture.course_id, lecture.courses?.color);
-  const kColor = kindColor(lecture.kind, cColor);
+  const customColor = getLectureColor(lecture, lecture.courses?.color);
 
   return (
     <div
+      draggable
+      onDragStart={(e) => onDragStart(e, lecture)}
+      onDragEnd={onDragEnd}
       onClick={(e) => {
         e.stopPropagation();
         onClick(lecture);
       }}
-      className="group absolute z-10 cursor-pointer overflow-hidden rounded-lg p-2 text-xs transition-all hover:z-20 hover:shadow-md"
+      className={cn(
+        "group absolute z-10 cursor-grab active:cursor-grabbing overflow-hidden rounded-lg p-2 text-xs transition-shadow hover:z-20 hover:shadow-lg select-none",
+        isDragging && "opacity-40 ring-2 ring-primary scale-[0.98]"
+      )}
       style={{
         top: `${lecture.top}px`,
         height: `${lecture.height}px`,
         left: `calc(${lecture.leftPct}% + 2px)`,
         width: `calc(${lecture.widthPct}% - 4px)`,
-        backgroundColor: mix(kColor, 14, "hsl(var(--card))"),
-        borderLeft: `4px solid ${kColor}`,
-        borderTop: `1px solid ${mix(kColor, 30, "hsl(var(--border))")}`,
-        borderRight: `1px solid ${mix(kColor, 30, "hsl(var(--border))")}`,
-        borderBottom: `1px solid ${mix(kColor, 30, "hsl(var(--border))")}`,
+        backgroundColor: mix(customColor, 15, "hsl(var(--card))"),
+        borderLeft: `4px solid ${customColor}`,
+        borderTop: `1px solid ${mix(customColor, 35, "hsl(var(--border))")}`,
+        borderRight: `1px solid ${mix(customColor, 35, "hsl(var(--border))")}`,
+        borderBottom: `1px solid ${mix(customColor, 35, "hsl(var(--border))")}`,
       }}
-      title={`${lecture.courses?.name} (${lecture.kind || "Lecture"}) - Click to edit`}
+      title={`${lecture.courses?.name} (${lecture.kind || "Lecture"}) · Drag to move time/day`}
     >
       <div className="flex items-start justify-between gap-1 leading-tight">
-        <b className="truncate font-semibold text-foreground text-[12px]">
-          {lecture.courses?.name}
-        </b>
+        <div className="flex items-center gap-1 min-w-0">
+          <GripVertical className="h-3 w-3 shrink-0 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <b className="truncate font-bold text-foreground text-[12px]">
+            {lecture.courses?.name}
+          </b>
+        </div>
         <button
           type="button"
           aria-label="Delete lecture"
@@ -225,10 +202,10 @@ function GoogleCalendarEvent({
         </span>
         {lecture.kind && (
           <span
-            className="rounded px-1 py-0.2 text-[9.5px] font-semibold uppercase tracking-wider"
+            className="rounded px-1 py-0.2 text-[9.5px] font-bold uppercase tracking-wider"
             style={{
-              backgroundColor: mix(kColor, 20),
-              color: kColor,
+              backgroundColor: mix(customColor, 22),
+              color: customColor,
             }}
           >
             {lecture.kind}
@@ -236,7 +213,7 @@ function GoogleCalendarEvent({
         )}
       </div>
 
-      {lecture.room && lecture.height >= 50 && (
+      {lecture.room && lecture.height >= 52 && (
         <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground/90">
           <MapPin className="h-2.5 w-2.5 shrink-0 text-muted-foreground/70" />
           <span className="truncate">{lecture.room}</span>
@@ -246,72 +223,144 @@ function GoogleCalendarEvent({
   );
 }
 
-/* ---------- Exam Card Component ---------- */
-function ExamCard({ x, past, onDelete }) {
-  const c = courseColor(x.course_id, x.courses?.color);
-  const n = daysUntil(x.exam_date);
-  const urgent = !past && n <= 1;
-  const soon = !past && n > 1 && n <= 5;
-  const pillColor = urgent ? "#b91c1c" : soon ? WARN : null;
-
+/* ---------- Unique Official Exam Card in Schedule Grid (Cover Style) ---------- */
+function ScheduleExamCoverEvent({ exam, top, height, onClick }) {
   return (
     <div
-      className={cn(
-        "group rounded-2xl border bg-card p-5 shadow-xs transition-all hover:shadow-md",
-        past && "opacity-60"
-      )}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick(exam);
+      }}
+      className="group absolute left-1 right-1 z-15 cursor-pointer overflow-hidden rounded-lg border-2 border-slate-700 bg-slate-900 text-white shadow-md transition-all hover:z-25 hover:shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+      style={{
+        top: `${top}px`,
+        height: `${height}px`,
+      }}
+      title={`EXAM: ${exam.courses?.name} · Click to edit or delete`}
     >
-      <div className="mb-3.5 flex items-center justify-between gap-2">
-        <h3
-          className="text-[15px] font-semibold"
-          style={{ color: mix(c, 45, "hsl(var(--foreground))") }}
-        >
-          {x.courses?.name}
-        </h3>
-        <span
-          className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold"
-          style={
-            pillColor
-              ? { background: mix(pillColor, 12), color: pillColor }
-              : {
-                  background: "hsl(var(--muted))",
-                  color: "hsl(var(--muted-foreground))",
-                }
-          }
-        >
-          {fmtDate(x.exam_date)}
+      {/* Unique Cover Top Banner */}
+      <div className="flex items-center justify-between border-b border-slate-700/80 bg-slate-950 px-2 py-1 dark:bg-black/60">
+        <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase tracking-wider text-amber-300">
+          <GraduationCap className="h-3 w-3 text-amber-400" />
+          OFFICIAL EXAM
         </span>
-      </div>
-
-      <div className="flex items-center gap-2 font-medium text-sm">
-        <i
-          className="h-2.5 w-2.5 shrink-0 rounded-full"
-          style={{ background: c }}
-        />
-        {x.courses?.code || x.courses?.name}
-      </div>
-
-      <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Clock className="h-3.5 w-3.5 text-muted-foreground/70" />
-        <span>{fmtTime(x.exam_time) || "Time TBA"}</span>
-        {x.room && (
-          <>
-            <span>·</span>
-            <MapPin className="h-3 w-3 text-muted-foreground/70" />
-            <span>{x.room}</span>
-          </>
+        {exam.exam_time && (
+          <span className="text-[10px] font-bold tabular-nums text-slate-300">
+            {fmtTime(exam.exam_time)}
+          </span>
         )}
       </div>
 
-      <div className="mt-4 flex items-center justify-between border-t pt-3">
-        <span className="text-xs font-medium text-muted-foreground">{relLabel(n)}</span>
-        <button
-          onClick={onDelete}
-          className="rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-red-600"
-        >
-          Delete
-        </button>
+      {/* Unique Cover Body */}
+      <div className="p-2 leading-tight">
+        <b className="block truncate text-xs font-bold text-white">
+          {exam.courses?.name}
+        </b>
+        {exam.courses?.code && (
+          <span className="text-[10px] text-slate-400 font-medium">
+            {exam.courses?.code}
+          </span>
+        )}
+        {exam.room && (
+          <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-200/90 font-medium">
+            <MapPin className="h-2.5 w-2.5 text-amber-400 shrink-0" />
+            <span className="truncate">{exam.room}</span>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+/* ---------- Dropdown Add Button Component ---------- */
+function AddDropdownButton({ onSelect, className }) {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={dropdownRef} className={cn("relative inline-flex items-center", className)}>
+      {/* Primary Action Button (Default: Add Lecture) */}
+      <button
+        type="button"
+        onClick={() => onSelect("lecture")}
+        className="inline-flex items-center gap-2 rounded-l-full border border-r-0 border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted hover:shadow-md"
+      >
+        <svg width="18" height="18" viewBox="0 0 36 36">
+          <path fill="#4285F4" d="M16 16v14h4V16h14v-4H20V-2h-4v14H2v4z" />
+          <path fill="#34A853" d="M30 16H20l-4-4h14z" />
+          <path fill="#FBBC05" d="M6 16h10l4 4H6z" />
+          <path fill="#EA4335" d="M20 6V-2h-4v8z" />
+        </svg>
+        <span>Add Lecture</span>
+      </button>
+
+      {/* Dropdown Arrow Toggle */}
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-label="More add options"
+        className="rounded-r-full border border-border bg-card px-2.5 py-2.5 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
+      >
+        <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+      </button>
+
+      {/* Menu Options */}
+      {open && (
+        <div className="absolute right-0 bottom-full mb-2 w-52 rounded-xl border border-border bg-card p-1 shadow-xl z-50 animate-in fade-in zoom-in-95">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onSelect("lecture");
+            }}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted"
+          >
+            <Calendar className="h-4 w-4 text-primary" />
+            <div className="text-left">
+              <span className="block">Add Lecture / Class</span>
+              <span className="text-[10px] font-normal text-muted-foreground">Default timetable class</span>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onSelect("lecture");
+            }}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted"
+          >
+            <CalendarDays className="h-4 w-4 text-blue-600" />
+            <div className="text-left">
+              <span className="block">Add Schedule</span>
+              <span className="text-[10px] font-normal text-muted-foreground">Weekly lab / section</span>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onSelect("exam");
+            }}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted"
+          >
+            <GraduationCap className="h-4 w-4 text-amber-500" />
+            <div className="text-left">
+              <span className="block">Add Exam</span>
+              <span className="text-[10px] font-normal text-muted-foreground">Midterm or final exam</span>
+            </div>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -326,11 +375,14 @@ export default function SchedulePage() {
   const [modal, setModal] = useState(null); // "lecture" | "exam" | null
   const [modalDefaults, setModalDefaults] = useState({});
   const [editingLecture, setEditingLecture] = useState(null);
-  const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, +1 = next week, etc.
+  const [editingExam, setEditingExam] = useState(null);
+  const [weekOffset, setWeekOffset] = useState(0);
 
-  // Current time tracker for live red indicator
+  // Drag and Drop State
+  const [draggedLecture, setDraggedLecture] = useState(null);
+  const [dragOverInfo, setDragOverInfo] = useState(null); // { day, minutes }
+
   const [currentTime, setCurrentTime] = useState(new Date());
-
   const gridContainerRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -393,8 +445,18 @@ export default function SchedulePage() {
       }
     });
 
-    minH = Math.max(minH, 6); // Cap earliest at 6 AM
-    maxH = Math.min(maxH, 23); // Cap latest at 11 PM
+    exams.forEach((ex) => {
+      if (ex.exam_time) {
+        const h = parseInt(ex.exam_time.split(":")[0], 10);
+        if (!isNaN(h)) {
+          minH = Math.min(minH, h);
+          maxH = Math.max(maxH, h + 2);
+        }
+      }
+    });
+
+    minH = Math.max(minH, 6);
+    maxH = Math.min(maxH, 23);
     if (maxH <= minH) maxH = minH + 10;
 
     const list = [];
@@ -403,9 +465,9 @@ export default function SchedulePage() {
     }
 
     return { startHour: minH, endHour: maxH, hours: list };
-  }, [lectures]);
+  }, [lectures, exams]);
 
-  // Scroll to 8 AM or earliest class on first render
+  // Scroll to 8 AM on load
   useEffect(() => {
     if (!loading && tab === "week" && gridContainerRef.current) {
       const scrollTarget = Math.max((startHour - 7) * HOUR_HEIGHT, 0);
@@ -416,9 +478,8 @@ export default function SchedulePage() {
   // Compute dates for the current view week (starts Saturday by DAY_ORDER)
   const weekDates = useMemo(() => {
     const now = new Date();
-    // Adjust by weekOffset
     const base = new Date(now.getFullYear(), now.getMonth(), now.getDate() + weekOffset * 7);
-    const baseDay = base.getDay(); // 0 is Sunday, 6 is Saturday
+    const baseDay = base.getDay();
     
     // Find the Saturday of this week
     const diffToSat = (baseDay + 1) % 7;
@@ -428,9 +489,11 @@ export default function SchedulePage() {
     return DAY_ORDER.map((d, index) => {
       const dayDate = new Date(sat);
       dayDate.setDate(sat.getDate() + index);
+      const iso = isoDate(dayDate);
       return {
         dayIndex: d,
         date: dayDate,
+        isoDate: iso,
         dateNumber: dayDate.getDate(),
         monthName: dayDate.toLocaleDateString("en-US", { month: "short" }),
         isToday: weekOffset === 0 && d === todayDow,
@@ -461,6 +524,31 @@ export default function SchedulePage() {
     return map;
   }, [lectures, startHour]);
 
+  // Map exams to the schedule grid by date
+  const dayExams = useMemo(() => {
+    const map = {};
+    DAY_ORDER.forEach((d) => {
+      const dateObj = weekDates.find((w) => w.dayIndex === d);
+      if (!dateObj) return;
+      const matching = exams.filter((ex) => ex.exam_date === dateObj.isoDate);
+      map[d] = matching.map((ex) => {
+        let startMin = 9 * 60; // default 9 AM
+        if (ex.exam_time) {
+          const [h, m] = ex.exam_time.split(":").map(Number);
+          startMin = h * 60 + (m || 0);
+        }
+        const top = ((startMin - startHour * 60) / 60) * HOUR_HEIGHT;
+        const height = Math.max((120 / 60) * HOUR_HEIGHT, 68); // 2 hours duration
+        return {
+          ...ex,
+          top,
+          height,
+        };
+      });
+    });
+    return map;
+  }, [exams, weekDates, startHour]);
+
   // Current time position in px
   const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
   const currentTimeTop = ((currentMinutes - startHour * 60) / 60) * HOUR_HEIGHT;
@@ -479,37 +567,93 @@ export default function SchedulePage() {
     setModal("lecture");
   }
 
+  // Mouse Drag and Drop Handlers
+  function handleDragStart(e, lecture) {
+    setDraggedLecture(lecture);
+    e.dataTransfer.setData("text/plain", lecture.id);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleDragEnd() {
+    setDraggedLecture(null);
+    setDragOverInfo(null);
+  }
+
+  function handleDayDragOver(e, day) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetY = e.clientY - rect.top;
+    const minutesFromStart = Math.round(((offsetY / HOUR_HEIGHT) * 60) / 15) * 15;
+    const targetMin = Math.max(startHour * 60, Math.min(endHour * 60, startHour * 60 + minutesFromStart));
+    setDragOverInfo({ day, minutes: targetMin });
+  }
+
+  async function handleDayDrop(e, day) {
+    e.preventDefault();
+    if (!draggedLecture) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetY = e.clientY - rect.top;
+    const minutesFromStart = Math.round(((offsetY / HOUR_HEIGHT) * 60) / 15) * 15;
+    const targetStartMin = Math.max(startHour * 60, Math.min(endHour * 60, startHour * 60 + minutesFromStart));
+    
+    // Calculate new times preserving duration
+    const [origSH, origSM] = (draggedLecture.start_time || "08:00").split(":").map(Number);
+    const origStart = origSH * 60 + (origSM || 0);
+    let origEnd = origStart + 90;
+    if (draggedLecture.end_time) {
+      const [origEH, origEM] = draggedLecture.end_time.split(":").map(Number);
+      origEnd = origEH * 60 + (origEM || 0);
+    }
+    const duration = Math.max(origEnd - origStart, 30);
+    const targetEndMin = Math.min(23 * 60 + 59, targetStartMin + duration);
+
+    const newStart = formatMinutesToTime(targetStartMin);
+    const newEnd = formatMinutesToTime(targetEndMin);
+
+    // Optimistic UI update
+    setLectures((prev) =>
+      prev.map((l) =>
+        l.id === draggedLecture.id
+          ? { ...l, day_of_week: day, start_time: newStart, end_time: newEnd }
+          : l
+      )
+    );
+
+    setDraggedLecture(null);
+    setDragOverInfo(null);
+
+    // Persist to Supabase
+    await supabase
+      .from("lectures")
+      .update({
+        day_of_week: day,
+        start_time: newStart,
+        end_time: newEnd,
+      })
+      .eq("id", draggedLecture.id);
+  }
+
   const del = async (table, id) => {
     if (confirm("Are you sure you want to delete this event?")) {
       if (await removeRow(table, id)) load();
     }
   };
 
+  function openAddModal(type = "lecture") {
+    setModalDefaults({});
+    setModal(type);
+  }
+
   return (
-    <div className="space-y-4">
-      {/* ─── Google Calendar Header Controls ─── */}
+    <div className="space-y-4 pb-20">
+      {/* ─── Top Navigation & Controls ─── */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        {/* Left: + Create Event Button & Date Title */}
+        {/* Left: Add Button & Week Navigation */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Google Calendar Style "+ Create" Button */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setModalDefaults({});
-                setModal(tab === "exams" ? "exam" : "lecture");
-              }}
-              className="inline-flex items-center gap-2.5 rounded-full border border-border/80 bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-xs transition-all hover:bg-muted hover:shadow-md"
-            >
-              {/* Google 4-color inspired Plus */}
-              <svg width="20" height="20" viewBox="0 0 36 36">
-                <path fill="#4285F4" d="M16 16v14h4V16h14v-4H20V-2h-4v14H2v4z" />
-                <path fill="#34A853" d="M30 16H20l-4-4h14z" />
-                <path fill="#FBBC05" d="M6 16h10l4 4H6z" />
-                <path fill="#EA4335" d="M20 6V-2h-4v8z" />
-              </svg>
-              <span>{tab === "exams" ? "Add Exam" : "Add Lecture"}</span>
-            </button>
-          </div>
+          {/* Top Add Button with Dropdown (Lecture is default) */}
+          <AddDropdownButton onSelect={openAddModal} />
 
           {/* Today Button */}
           <button
@@ -550,7 +694,7 @@ export default function SchedulePage() {
           </div>
         </div>
 
-        {/* Right: View Tabs & Action */}
+        {/* Right: View Switcher */}
         <div className="flex items-center gap-2">
           <div className="flex rounded-xl bg-muted p-1">
             <button
@@ -579,7 +723,7 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {/* ─── Main Content Area ─── */}
+      {/* ─── Main Schedule View ─── */}
       {loading ? (
         <p className="py-12 text-center text-sm text-muted-foreground">
           Loading your calendar schedule...
@@ -589,7 +733,7 @@ export default function SchedulePage() {
           {/* Scrollable Google Calendar Grid */}
           <div
             ref={gridContainerRef}
-            className="relative max-h-[calc(100vh-210px)] min-h-[660px] overflow-y-auto overflow-x-auto"
+            className="relative max-h-[calc(100vh-220px)] min-h-[660px] overflow-y-auto overflow-x-auto"
           >
             <div className="min-w-[880px]">
               {/* Sticky Top Header: Days of the Week */}
@@ -657,13 +801,22 @@ export default function SchedulePage() {
                   {DAY_ORDER.map((d) => {
                     const isToday = weekOffset === 0 && d === todayDow;
                     const dayLectures = dayPositionedLectures[d] || [];
+                    const examsOnThisDay = dayExams[d] || [];
+
+                    const isHoveredTarget = dragOverInfo && dragOverInfo.day === d;
+                    const ghostTop = isHoveredTarget
+                      ? ((dragOverInfo.minutes - startHour * 60) / 60) * HOUR_HEIGHT
+                      : 0;
 
                     return (
                       <div
                         key={d}
+                        onDragOver={(e) => handleDayDragOver(e, d)}
+                        onDrop={(e) => handleDayDrop(e, d)}
                         className={cn(
                           "relative h-full transition-colors",
-                          isToday && "bg-primary/[0.015]"
+                          isToday && "bg-primary/[0.015]",
+                          isHoveredTarget && "bg-primary/[0.06]"
                         )}
                       >
                         {/* Hour horizontal grid lines & clickable cells */}
@@ -681,12 +834,26 @@ export default function SchedulePage() {
                             {/* Half-hour dotted divider */}
                             <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-border/20 pointer-events-none" />
 
-                            {/* Hover prompt */}
                             <span className="absolute right-2 top-2 text-[10px] font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                               + Add
                             </span>
                           </div>
                         ))}
+
+                        {/* Drag Ghost Preview */}
+                        {isHoveredTarget && draggedLecture && (
+                          <div
+                            className="pointer-events-none absolute left-1 right-1 z-30 rounded-lg border-2 border-dashed border-primary bg-primary/20 transition-all"
+                            style={{
+                              top: `${ghostTop}px`,
+                              height: `${draggedLecture.height}px`,
+                            }}
+                          >
+                            <span className="p-2 text-[11px] font-bold text-primary block">
+                              Move {draggedLecture.courses?.name} here
+                            </span>
+                          </div>
+                        )}
 
                         {/* Live Red Current Time Indicator */}
                         {isToday && isCurrentTimeVisible && (
@@ -694,18 +861,30 @@ export default function SchedulePage() {
                             className="pointer-events-none absolute left-0 right-0 z-30 flex items-center"
                             style={{ top: `${currentTimeTop}px` }}
                           >
-                            {/* Red dot */}
                             <div className="-ml-1.5 h-3 w-3 rounded-full bg-red-600 shadow-xs" />
-                            {/* Red line */}
                             <div className="h-[2px] flex-1 bg-red-600 shadow-xs" />
                           </div>
                         )}
+
+                        {/* Unique Official Exams Shown on the Schedule Grid */}
+                        {examsOnThisDay.map((ex) => (
+                          <ScheduleExamCoverEvent
+                            key={ex.id}
+                            exam={ex}
+                            top={ex.top}
+                            height={ex.height}
+                            onClick={(item) => setEditingExam(item)}
+                          />
+                        ))}
 
                         {/* Positioned Lecture Event Blocks */}
                         {dayLectures.map((l) => (
                           <GoogleCalendarEvent
                             key={l.id}
                             lecture={l}
+                            isDragging={draggedLecture?.id === l.id}
+                            onDragStart={handleDragStart}
+                            onDragEnd={handleDragEnd}
                             onClick={(lec) => setEditingLecture(lec)}
                             onDelete={(id) => del("lectures", id)}
                           />
@@ -728,10 +907,7 @@ export default function SchedulePage() {
             Add upcoming midterm and final exams to keep track of your dates.
           </p>
           <button
-            onClick={() => {
-              setModalDefaults({});
-              setModal("exam");
-            }}
+            onClick={() => openAddModal("exam")}
             className="btn-primary mt-4 inline-flex items-center gap-1.5"
           >
             <Plus className="h-4 w-4" />
@@ -740,18 +916,65 @@ export default function SchedulePage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {sortedExams.map((x) => (
-            <ExamCard
+          {exams.map((x) => (
+            <div
               key={x.id}
-              x={x}
-              past={x.exam_date < today}
-              onDelete={() => del("exams", x.id)}
-            />
+              onClick={() => setEditingExam(x)}
+              className="cursor-pointer transition-transform hover:-translate-y-0.5"
+            >
+              <div className="rounded-2xl border-2 border-slate-700 bg-slate-900 p-5 text-white shadow-md dark:border-zinc-700 dark:bg-zinc-900">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-2.5 py-0.5 text-xs font-bold text-amber-300">
+                    <GraduationCap className="h-3.5 w-3.5 text-amber-400" />
+                    OFFICIAL EXAM
+                  </span>
+                  <span className="text-xs text-slate-300 font-semibold">
+                    {fmtDate(x.exam_date)}
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-white leading-tight">
+                  {x.courses?.name}
+                </h3>
+                <div className="mt-2 flex items-center gap-2 text-xs text-slate-300">
+                  <Clock className="h-3.5 w-3.5 text-slate-400" />
+                  <span>{fmtTime(x.exam_time) || "Time TBA"}</span>
+                  {x.room && (
+                    <>
+                      <span>·</span>
+                      <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                      <span>{x.room}</span>
+                    </>
+                  )}
+                </div>
+                <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-3">
+                  <span className="text-xs text-slate-400 font-medium">
+                    {relLabel(daysUntil(x.exam_date))}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      del("exams", x.id);
+                    }}
+                    className="text-xs font-medium text-red-400 hover:text-red-300"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       )}
 
-      {/* ─── Add Modal (Pre-filled on Cell Click) ─── */}
+      {/* ─── Bottom Floating Action Button (Requirement 1) ─── */}
+      <div className="fixed bottom-20 right-6 z-40 md:bottom-8">
+        <AddDropdownButton
+          onSelect={openAddModal}
+          className="shadow-2xl"
+        />
+      </div>
+
+      {/* ─── Add Modal ─── */}
       {modal && (
         <AddModal
           type={modal}
@@ -762,12 +985,23 @@ export default function SchedulePage() {
         />
       )}
 
-      {/* ─── Edit Lecture Modal (On Event Click) ─── */}
+      {/* ─── Edit Lecture Modal (With Color Picker) ─── */}
       {editingLecture && (
         <EditLectureModal
           lecture={editingLecture}
           courses={courses}
           onClose={() => setEditingLecture(null)}
+          onSaved={load}
+          onDeleted={load}
+        />
+      )}
+
+      {/* ─── Edit Exam Modal ─── */}
+      {editingExam && (
+        <EditExamModal
+          exam={editingExam}
+          courses={courses}
+          onClose={() => setEditingExam(null)}
           onSaved={load}
           onDeleted={load}
         />

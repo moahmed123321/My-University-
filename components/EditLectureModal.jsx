@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { DAY_NAMES, DAY_ORDER } from "@/lib/helpers";
+import {
+  LECTURE_COLOR_PRESETS,
+  getLectureColor,
+  setStoredLectureColor,
+  deleteStoredLectureColor,
+} from "@/lib/lectureColors";
 import Modal from "@/components/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +22,7 @@ export default function EditLectureModal({ lecture, courses = [], onClose, onSav
   const [startTime, setStartTime] = useState(lecture.start_time ? lecture.start_time.slice(0, 5) : "09:00");
   const [endTime, setEndTime] = useState(lecture.end_time ? lecture.end_time.slice(0, 5) : "10:30");
   const [room, setRoom] = useState(lecture.room || "");
+  const [color, setColor] = useState(() => getLectureColor(lecture));
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
@@ -45,6 +52,9 @@ export default function EditLectureModal({ lecture, courses = [], onClose, onSav
       return;
     }
 
+    // Save unique color
+    setStoredLectureColor(lecture.id, color);
+
     if (onSaved) onSaved();
     onClose();
   }
@@ -58,12 +68,13 @@ export default function EditLectureModal({ lecture, courses = [], onClose, onSav
       setError(delError.message);
       return;
     }
+    deleteStoredLectureColor(lecture.id);
     if (onDeleted) onDeleted();
     onClose();
   }
 
   return (
-    <Modal title="Edit Lecture / Event" onClose={onClose}>
+    <Modal title="Edit Lecture / Class" onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -83,6 +94,35 @@ export default function EditLectureModal({ lecture, courses = [], onClose, onSav
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Unique Color Picker */}
+        <div className="space-y-1.5">
+          <Label>Lecture Color</Label>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {LECTURE_COLOR_PRESETS.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                aria-label={`Select color ${preset}`}
+                onClick={() => setColor(preset)}
+                className={`h-7 w-7 rounded-full transition-transform focus:outline-none ${
+                  color === preset
+                    ? "scale-110 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    : "hover:scale-105"
+                }`}
+                style={{ backgroundColor: preset }}
+              />
+            ))}
+            <input
+              type="color"
+              aria-label="Custom color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className="h-7 w-7 cursor-pointer rounded-full border-0 bg-transparent p-0"
+              title="Custom color"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
