@@ -105,53 +105,24 @@ export default function Sidebar() {
                   <div className="mt-1 space-y-1 border-l pl-4">
                     {courses.length ? (
                       courses.map((course) => {
-                        const isCurrentCourse = pathname.startsWith(`/courses/${course.id}`);
-                        const isNotesActive = pathname === `/courses/${course.id}/notes`;
-                        const isOverviewActive = pathname === `/courses/${course.id}`;
+                        const isActive = pathname === `/courses/${course.id}`;
                         return (
-                          <div key={course.id} className="space-y-0.5">
-                            <Link
-                              href={`/courses/${course.id}`}
-                              className={cn(
-                                "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
-                                isOverviewActive
-                                  ? "bg-muted font-medium text-foreground"
-                                  : "text-muted-foreground hover:text-foreground"
-                              )}
-                            >
-                              <span
-                                className="h-2 w-2 shrink-0 rounded-full"
-                                style={{ backgroundColor: course.color || "#c8102e" }}
-                              />
-                              <span className="truncate">{course.name}</span>
-                            </Link>
-                            {isCurrentCourse && (
-                              <div className="ml-4 space-y-0.5 border-l pl-2 py-0.5">
-                                <Link
-                                  href={`/courses/${course.id}`}
-                                  className={cn(
-                                    "flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors",
-                                    isOverviewActive
-                                      ? "font-semibold text-primary"
-                                      : "text-muted-foreground hover:text-foreground"
-                                  )}
-                                >
-                                  <span>Overview</span>
-                                </Link>
-                                <Link
-                                  href={`/courses/${course.id}/notes`}
-                                  className={cn(
-                                    "flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors",
-                                    isNotesActive
-                                      ? "font-semibold text-primary"
-                                      : "text-muted-foreground hover:text-foreground"
-                                  )}
-                                >
-                                  <span>Notes, Canvas & Folders</span>
-                                </Link>
-                              </div>
+                          <Link
+                            key={course.id}
+                            href={`/courses/${course.id}`}
+                            className={cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
+                              isActive
+                                ? "bg-muted font-medium text-foreground"
+                                : "text-muted-foreground hover:text-foreground"
                             )}
-                          </div>
+                          >
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full"
+                              style={{ backgroundColor: course.color || "#c8102e" }}
+                            />
+                            <span className="truncate">{course.name}</span>
+                          </Link>
                         );
                       })
                     ) : (
