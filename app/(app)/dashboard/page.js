@@ -106,6 +106,12 @@ const Icon = ({ name, size = 16 }) => {
         <circle cx="12" cy="7" r="4" />
       </>
     ),
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 3" />
+      </>
+    ),
   }[name];
   return (
     <svg
@@ -239,7 +245,7 @@ function QuickAdd({ onPick }) {
 }
 
 /* ---------- timeline row ---------- */
-const DOT = 18; // px from the top of a row to the centre of the dot
+const DOT = 20; // px from the top of a row to the centre of the dot
 
 function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
   const c = getLectureColor(l, l.courses?.color);
@@ -253,27 +259,14 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
 
   return (
     <div
-      className="grid grid-cols-[62px_12px_1fr] gap-2 py-1 sm:grid-cols-[86px_14px_1fr] sm:gap-3"
+      className="grid grid-cols-[14px_1fr] gap-2.5 py-1 sm:grid-cols-[16px_1fr] sm:gap-3.5"
       style={{ "--c": c }}
     >
-      {/* time */}
-      <div
-        className={
-          "pt-2.5 text-right text-[13px] leading-tight " +
-          (past ? "text-muted-foreground" : "")
-        }
-      >
-        <b className="block font-semibold">{fmtTime(l.start_time)}</b>
-        {l.end_time ? (
-          <span className="text-muted-foreground">{fmtTime(l.end_time)}</span>
-        ) : null}
-      </div>
-
       {/* rail + dot */}
       <div className="relative">
         {!(first && last) && (
           <span
-            className="absolute left-1/2 w-px -translate-x-1/2 bg-border"
+            className="absolute left-1/2 w-0.5 -translate-x-1/2 bg-border/60"
             style={{
               top: first ? DOT : 0,
               bottom: last ? `calc(100% - ${DOT}px)` : 0,
@@ -293,13 +286,13 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
           />
         )}
         <span
-          className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+          className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full transition-transform"
           style={
             now
               ? {
                   top: DOT,
-                  width: 14,
-                  height: 14,
+                  width: 12,
+                  height: 12,
                   background: OK,
                   border: "2px solid hsl(var(--card))",
                   boxShadow: `0 0 0 2px ${OK}`,
@@ -317,69 +310,83 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
 
       {/* card */}
       <div
-        className="rounded-xl px-3 py-2.5"
+        className="rounded-2xl p-3 sm:p-3.5 transition-all shadow-xs"
         style={{
-          background: mix(c, now ? 14 : 8),
-          border: `1px solid ${mix(c, now ? 45 : 22, "hsl(var(--border))")}`,
-          borderLeft: `3px solid ${c}`,
-          opacity: past ? 0.7 : 1,
+          background: mix(c, now ? 12 : 6),
+          border: `1px solid ${mix(c, now ? 40 : 20, "hsl(var(--border))")}`,
+          borderLeft: `4px solid ${c}`,
+          opacity: past ? 0.65 : 1,
         }}
       >
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <b className="text-sm font-semibold leading-snug">
-              {l.courses?.name}
-            </b>
-            {instructor ? (
-              <div className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <Icon name="user" size={12} />
-                <span>{instructor}</span>
-              </div>
-            ) : null}
+        {/* Top: Minimal Time & Status Badge */}
+        <div className="flex items-center justify-between gap-2 pb-1.5 mb-1.5 border-b border-border/30">
+          <div className="flex items-center gap-1.5 text-xs font-semibold tabular-nums text-foreground/80">
+            <Icon name="clock" size={12} />
+            <span>
+              {fmtTime(l.start_time)}
+              {l.end_time ? ` – ${fmtTime(l.end_time)}` : ""}
+            </span>
           </div>
-          <span className="flex gap-1.5">
+
+          <div className="flex items-center gap-1.5 shrink-0">
             {now ? (
-              <Pill
-                className="bg-card"
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold"
                 style={{
+                  background: mix(BRAND, 15),
                   color: BRAND,
-                  boxShadow:
-                    "0 1px 4px #00000038, inset 0 0 0 1px currentColor",
+                  border: `1px solid ${mix(BRAND, 30)}`,
                 }}
               >
+                <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: BRAND }} />
                 Now
-              </Pill>
+              </span>
             ) : upNext ? (
-              <Pill
-                className="bg-card"
+              <span
+                className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold"
                 style={{
+                  background: mix(INFO, 15),
                   color: INFO,
-                  boxShadow:
-                    "0 1px 4px #00000038, inset 0 0 0 1px currentColor",
+                  border: `1px solid ${mix(INFO, 30)}`,
                 }}
               >
                 Up next
-              </Pill>
+              </span>
             ) : null}
-            {l.kind ? (
-              <Pill
-                className="text-white"
-                style={{
-                  background: mix(c, 78, "#000"),
-                  boxShadow: "0 1px 2px #0000002e",
-                }}
-              >
+
+            {l.kind && l.kind !== "Lecture" ? (
+              <span className="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-muted text-muted-foreground">
                 {l.kind}
-              </Pill>
+              </span>
             ) : null}
-          </span>
-        </div>
-        {l.room ? (
-          <div className="mt-1 flex items-center gap-1 text-[13px] text-muted-foreground">
-            <Icon name="pin" size={13} />
-            {l.room}
           </div>
-        ) : null}
+        </div>
+
+        {/* Middle: Lecture / Course Title */}
+        <h3 className="text-[14px] sm:text-[15px] font-bold text-foreground leading-snug">
+          {l.courses?.name}
+        </h3>
+
+        {/* Bottom: Structure (Instructor) & Place (Room) */}
+        {(instructor || l.room) && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            {instructor && (
+              <div className="flex items-center gap-1.5 font-medium min-w-0" title={`Instructor: ${instructor}`}>
+                <Icon name="user" size={12} />
+                <span className="truncate">{instructor}</span>
+              </div>
+            )}
+            {instructor && l.room && (
+              <span className="text-muted-foreground/40 font-normal">·</span>
+            )}
+            {l.room && (
+              <div className="flex items-center gap-1.5 font-medium min-w-0" title={`Place: ${l.room}`}>
+                <Icon name="pin" size={12} />
+                <span className="truncate">{l.room}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
