@@ -9,6 +9,12 @@ import AddModal from "@/components/AddModal";
 import EditLectureModal from "@/components/EditLectureModal";
 import EditExamModal from "@/components/EditExamModal";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   getLectureColor,
   LECTURE_COLOR_PRESETS,
 } from "@/lib/lectureColors";
@@ -272,95 +278,58 @@ function ScheduleExamCoverEvent({ exam, top, height, onClick }) {
   );
 }
 
-/* ---------- Dropdown Add Button Component ---------- */
-function AddDropdownButton({ onSelect, className }) {
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
+/* ---------- Standard Add Button with Dropdown (Lecture is default) ---------- */
+function AddActionButton({ onSelect, className }) {
   return (
-    <div ref={dropdownRef} className={cn("relative inline-flex items-center", className)}>
-      {/* Primary Action Button (Default: Add Lecture) */}
+    <div className={cn("inline-flex items-center rounded-xl bg-primary text-primary-foreground shadow-xs", className)}>
+      {/* Primary Click: Adds Lecture directly by default */}
       <button
         type="button"
         onClick={() => onSelect("lecture")}
-        className="inline-flex items-center gap-2 rounded-l-full border border-r-0 border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted hover:shadow-md"
+        className="inline-flex items-center gap-1.5 rounded-l-xl px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+        title="Add Lecture (Default)"
       >
-        <svg width="18" height="18" viewBox="0 0 36 36">
-          <path fill="#4285F4" d="M16 16v14h4V16h14v-4H20V-2h-4v14H2v4z" />
-          <path fill="#34A853" d="M30 16H20l-4-4h14z" />
-          <path fill="#FBBC05" d="M6 16h10l4 4H6z" />
-          <path fill="#EA4335" d="M20 6V-2h-4v8z" />
-        </svg>
-        <span>Add Lecture</span>
+        <Plus className="h-4 w-4" />
+        <span>Add</span>
       </button>
 
-      {/* Dropdown Arrow Toggle */}
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-label="More add options"
-        className="rounded-r-full border border-border bg-card px-2.5 py-2.5 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
-      >
-        <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
-      </button>
+      <div className="h-4 w-px bg-primary-foreground/30" />
 
-      {/* Menu Options */}
-      {open && (
-        <div className="absolute right-0 bottom-full mb-2 w-52 rounded-xl border border-border bg-card p-1 shadow-xl z-50 animate-in fade-in zoom-in-95">
+      {/* Dropdown Menu for options */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <button
             type="button"
-            onClick={() => {
-              setOpen(false);
-              onSelect("lecture");
-            }}
-            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted"
+            className="rounded-r-xl px-2 py-2 text-primary-foreground transition hover:bg-primary/90"
+            aria-label="Add options"
           >
-            <Calendar className="h-4 w-4 text-primary" />
-            <div className="text-left">
-              <span className="block">Add Lecture / Class</span>
-              <span className="text-[10px] font-normal text-muted-foreground">Default timetable class</span>
-            </div>
+            <ChevronDown className="h-4 w-4" />
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              onSelect("lecture");
-            }}
-            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted"
-          >
-            <CalendarDays className="h-4 w-4 text-blue-600" />
-            <div className="text-left">
-              <span className="block">Add Schedule</span>
-              <span className="text-[10px] font-normal text-muted-foreground">Weekly lab / section</span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-52">
+          <DropdownMenuItem onClick={() => onSelect("lecture")}>
+            <Calendar className="mr-2 h-4 w-4 text-primary" />
+            <div className="flex flex-col text-left">
+              <span className="font-semibold text-xs">Lecture (Default)</span>
+              <span className="text-[10px] text-muted-foreground">Timetable class</span>
             </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              onSelect("exam");
-            }}
-            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted"
-          >
-            <GraduationCap className="h-4 w-4 text-amber-500" />
-            <div className="text-left">
-              <span className="block">Add Exam</span>
-              <span className="text-[10px] font-normal text-muted-foreground">Midterm or final exam</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onSelect("lecture")}>
+            <CalendarDays className="mr-2 h-4 w-4 text-blue-500" />
+            <div className="flex flex-col text-left">
+              <span className="font-semibold text-xs">Schedule / Section</span>
+              <span className="text-[10px] text-muted-foreground">Lab or tutorial</span>
             </div>
-          </button>
-        </div>
-      )}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onSelect("exam")}>
+            <GraduationCap className="mr-2 h-4 w-4 text-amber-500" />
+            <div className="flex flex-col text-left">
+              <span className="font-semibold text-xs">Exam</span>
+              <span className="text-[10px] text-muted-foreground">Midterm or final</span>
+            </div>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -647,13 +616,13 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="space-y-4 pb-20">
+    <div className="space-y-4">
       {/* ─── Top Navigation & Controls ─── */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         {/* Left: Add Button & Week Navigation */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Top Add Button with Dropdown (Lecture is default) */}
-          <AddDropdownButton onSelect={openAddModal} />
+          <AddActionButton onSelect={openAddModal} />
 
           {/* Today Button */}
           <button
@@ -965,14 +934,6 @@ export default function SchedulePage() {
           ))}
         </div>
       )}
-
-      {/* ─── Bottom Floating Action Button (Requirement 1) ─── */}
-      <div className="fixed bottom-20 right-6 z-40 md:bottom-8">
-        <AddDropdownButton
-          onSelect={openAddModal}
-          className="shadow-2xl"
-        />
-      </div>
 
       {/* ─── Add Modal ─── */}
       {modal && (

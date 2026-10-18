@@ -146,3 +146,4 @@ export default function EditExamModal({ exam, courses = [], onClose, onSaved, on
     </Modal>
   );
 }
+
