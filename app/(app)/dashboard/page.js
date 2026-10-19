@@ -812,7 +812,7 @@ export default function OverviewPage() {
   const dayRows = useMemo(() => {
     const selIso = isoOf(sel);
     const dayLectures = lectures
-      .filter((l) => l.day_of_week === sel.getDay())
+      .filter((l) => l.day_of_week !== null && l.day_of_week !== undefined && Number(l.day_of_week) === sel.getDay())
       .map((l) => ({ ...l, itemType: "lecture" }));
     const dayExams = exams
       .filter((x) => x.exam_date === selIso)
@@ -845,7 +845,7 @@ export default function OverviewPage() {
 
   // Course of the lecture happening right now (else the last one that ended today).
   const { liveCourseId, defaultCourseId } = useMemo(() => {
-    const today = lectures.filter((l) => l.day_of_week === now.getDay());
+    const today = lectures.filter((l) => l.day_of_week !== null && l.day_of_week !== undefined && Number(l.day_of_week) === now.getDay());
     const live = today.find(
       (l) =>
         toMin(l.start_time) <= nowMin &&

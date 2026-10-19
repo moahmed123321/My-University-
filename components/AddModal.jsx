@@ -117,7 +117,8 @@ const FORMS = {
 };
 
 export default function AddModal({ type, courses = [], defaultCourseId = "", initialValues = {}, onClose, onSaved }) {
-  const cfg = FORMS[type];
+  const [activeType, setActiveType] = useState(type);
+  const cfg = FORMS[activeType] || FORMS[type];
   const [values, setValues] = useState(() => {
     const v = {};
     cfg.fields.forEach((f) => {
@@ -130,6 +131,17 @@ export default function AddModal({ type, courses = [], defaultCourseId = "", ini
   const [error, setError] = useState("");
 
   const blocked = cfg.needsCourse && courses.length === 0;
+
+  function switchToCourse() {
+    const courseCfg = FORMS.course;
+    const v = {};
+    courseCfg.fields.forEach((f) => {
+      v[f.name] = f.default ?? "";
+    });
+    setValues(v);
+    setError("");
+    setActiveType("course");
+  }
 
   function set(name, value) {
     setValues((prev) => ({ ...prev, [name]: value }));
@@ -165,18 +177,33 @@ export default function AddModal({ type, courses = [], defaultCourseId = "", ini
       setStoredLectureColor(data.id, customLectureColor);
     }
 
-    if (onSaved) onSaved();
+    if (onSaved) onSaved(data);
     onClose();
   }
 
   return (
     <Modal title={cfg.title} onClose={onClose}>
       {blocked ? (
-        <div className="text-sm text-gray-700">
-          <p className="mb-3">You need at least one course first.</p>
-          <Link href="/courses" className="btn-primary" onClick={onClose}>
-            Go to Courses
-          </Link>
+        <div className="py-2 text-center text-sm text-gray-700 dark:text-gray-300">
+          <p className="mb-4">
+            You need to create a course first before scheduling {activeType === "lecture" ? "classes" : "events"}.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={switchToCourse}
+              className="btn-primary"
+            >
+              + Create Course Now
+            </button>
+            <Link
+              href="/courses"
+              className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
+              onClick={onClose}
+            >
+              Go to Courses Page
+            </Link>
+          </div>
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-3">

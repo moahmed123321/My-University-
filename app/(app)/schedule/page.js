@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { DAY_NAMES, DAY_ORDER, fmtTime, isoDate } from "@/lib/helpers";
 import { removeRow, updateRow } from "@/lib/db";
-import { dbGetAll, dbPutMany } from "@/lib/offlineDb";
+import { dbGetAll, dbPutMany, getOutbox } from "@/lib/offlineDb";
 import AddModal from "@/components/AddModal";
 import EditLectureModal from "@/components/EditLectureModal";
 import EditExamModal from "@/components/EditExamModal";
@@ -31,6 +31,7 @@ import {
   GripVertical,
   Calendar,
   User,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -138,13 +139,16 @@ function computeDayLayout(events, startHour) {
 /* ---------- Google Calendar Event Component with Mouse Drag-and-Drop ---------- */
 function GoogleCalendarEvent({
   lecture,
+  courses = [],
   isDragging,
   onDragStart,
   onDragEnd,
   onClick,
   onDelete,
 }) {
-  const customColor = getLectureColor(lecture, lecture.courses?.color);
+  const course = lecture.courses || (courses && courses.find((c) => c.id === lecture.course_id)) || null;
+  const courseName = course?.name || "Untitled Class";
+  const customColor = getLectureColor(lecture, course?.color);
 
   return (
     <div
@@ -170,13 +174,13 @@ function GoogleCalendarEvent({
         borderRight: `1px solid ${mix(customColor, 35, "hsl(var(--border))")}`,
         borderBottom: `1px solid ${mix(customColor, 35, "hsl(var(--border))")}`,
       }}
-      title={`${lecture.courses?.name} (${lecture.kind || "Lecture"}) · Drag to move time/day`}
+      title={`${courseName} (${lecture.kind || "Lecture"}) · Drag to move time/day`}
     >
       <div className="flex items-start justify-between gap-1 leading-tight">
         <div className="flex items-center gap-1 min-w-0">
           <GripVertical className="h-3 w-3 shrink-0 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />
           <b className="truncate font-bold text-foreground text-[12px]">
-            {lecture.courses?.name}
+            {courseName}
           </b>
         </div>
         <button
@@ -211,12 +215,12 @@ function GoogleCalendarEvent({
         )}
       </div>
 
-      {(lecture.courses?.professor || lecture.room) && lecture.height >= 48 && (
+      {(course?.professor || lecture.room) && lecture.height >= 48 && (
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground/90">
-          {lecture.courses?.professor && (
-            <div className="flex items-center gap-1 min-w-0" title={`Instructor: ${lecture.courses.professor}`}>
+          {course?.professor && (
+            <div className="flex items-center gap-1 min-w-0" title={`Instructor: ${course.professor}`}>
               <User className="h-2.5 w-2.5 shrink-0 text-muted-foreground/70" />
-              <span className="truncate">{lecture.courses.professor}</span>
+              <span className="truncate">{course.professor}</span>
             </div>
           )}
           {lecture.room && (
@@ -232,7 +236,10 @@ function GoogleCalendarEvent({
 }
 
 /* ---------- Unique Official Exam Card in Schedule Grid (Cover Style) ---------- */
-function ScheduleExamCoverEvent({ exam, top, height, onClick }) {
+function ScheduleExamCoverEvent({ exam, courses = [], top, height, onClick }) {
+  const course = exam.courses || (courses && courses.find((c) => c.id === exam.course_id)) || null;
+  const courseName = course?.name || "Exam";
+
   return (
     <div
       onClick={(e) => {
@@ -244,7 +251,7 @@ function ScheduleExamCoverEvent({ exam, top, height, onClick }) {
         top: `${top}px`,
         height: `${height}px`,
       }}
-      title={`EXAM: ${exam.courses?.name} · Click to edit or delete`}
+      title={`EXAM: ${courseName} · Click to edit or delete`}
     >
       {/* Unique Cover Top Banner */}
       <div className="flex items-center justify-between border-b border-slate-700/80 bg-slate-950 px-2 py-1 dark:bg-black/60">
@@ -262,11 +269,11 @@ function ScheduleExamCoverEvent({ exam, top, height, onClick }) {
       {/* Unique Cover Body */}
       <div className="p-2 leading-tight">
         <b className="block truncate text-xs font-bold text-white">
-          {exam.courses?.name}
+          {courseName}
         </b>
-        {exam.courses?.code && (
+        {course?.code && (
           <span className="text-[10px] text-slate-400 font-medium">
-            {exam.courses?.code}
+            {course.code}
           </span>
         )}
         {exam.room && (
@@ -323,6 +330,13 @@ function AddActionButton({ onSelect, className }) {
               <span className="text-[10px] text-muted-foreground">Lab or tutorial</span>
             </div>
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onSelect("course")}>
+            <BookOpen className="mr-2 h-4 w-4 text-emerald-500" />
+            <div className="flex flex-col text-left">
+              <span className="font-semibold text-xs">Course</span>
+              <span className="text-[10px] text-muted-foreground">Subject / Class</span>
+            </div>
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onSelect("exam")}>
             <GraduationCap className="mr-2 h-4 w-4 text-amber-500" />
             <div className="flex flex-col text-left">
@@ -342,7 +356,7 @@ export default function SchedulePage() {
   const [lectures, setLectures] = useState([]);
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null); // "lecture" | "exam" | null
+  const [modal, setModal] = useState(null); // "lecture" | "exam" | "course" | null
   const [modalDefaults, setModalDefaults] = useState({});
   const [editingLecture, setEditingLecture] = useState(null);
   const [editingExam, setEditingExam] = useState(null);
@@ -364,16 +378,14 @@ export default function SchedulePage() {
         dbGetAll("exams"),
       ]);
 
-      if (localC.length || localL.length || localE.length) {
-        const cMap = new Map(localC.map((c) => [c.id, c]));
-        const joinedL = localL.map((l) => ({ ...l, courses: cMap.get(l.course_id) || null }));
-        const joinedE = localE.map((e) => ({ ...e, courses: cMap.get(e.course_id) || null }));
+      const cMap = new Map((localC || []).map((c) => [c.id, c]));
+      const joinedL = (localL || []).map((l) => ({ ...l, courses: cMap.get(l.course_id) || null }));
+      const joinedE = (localE || []).map((e) => ({ ...e, courses: cMap.get(e.course_id) || null }));
 
-        setCourses([...localC].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
-        setLectures([...joinedL].sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")));
-        setExams([...joinedE].sort((a, b) => (a.exam_date || "").localeCompare(b.exam_date || "")));
-        setLoading(false);
-      }
+      setCourses([...(localC || [])].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+      setLectures([...joinedL].sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")));
+      setExams([...joinedE].sort((a, b) => (a.exam_date || "").localeCompare(b.exam_date || "")));
+      setLoading(false);
     } catch (e) {
       console.warn("[Schedule] Error reading local db:", e);
     }
@@ -397,15 +409,35 @@ export default function SchedulePage() {
           .order("exam_date"),
       ]);
 
-      if (c.data) {
+      if (c.data && !c.error) {
         setCourses(c.data);
         dbPutMany("courses", c.data);
       }
-      if (l.data) {
-        setLectures(l.data);
+      if (l.data && !l.error) {
+        // Safe merge with local outbox items
+        const outbox = await getOutbox();
+        const pendingLectureIds = new Set(
+          outbox.filter((item) => item.table === "lectures").map((item) => item.id)
+        );
+        const currentLocal = await dbGetAll("lectures");
+        const pendingLocalLectures = currentLocal.filter((item) => pendingLectureIds.has(item.id));
+        const remoteIds = new Set(l.data.map((item) => item.id));
+
+        const coursesList = c.data || [];
+        const mergedLectures = [
+          ...l.data,
+          ...pendingLocalLectures
+            .filter((item) => !remoteIds.has(item.id))
+            .map((item) => {
+              const crs = coursesList.find((cItem) => cItem.id === item.course_id);
+              return { ...item, courses: crs || null };
+            }),
+        ];
+
+        setLectures(mergedLectures.sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")));
         dbPutMany("lectures", l.data.map(({ courses, ...rest }) => rest));
       }
-      if (e.data) {
+      if (e.data && !e.error) {
         setExams(e.data);
         dbPutMany("exams", e.data.map(({ courses, ...rest }) => rest));
       }
@@ -524,7 +556,9 @@ export default function SchedulePage() {
   const dayPositionedLectures = useMemo(() => {
     const map = {};
     DAY_ORDER.forEach((d) => {
-      const dayLectures = lectures.filter((l) => l.day_of_week === d);
+      const dayLectures = lectures.filter(
+        (l) => l.day_of_week !== null && l.day_of_week !== undefined && Number(l.day_of_week) === d
+      );
       map[d] = computeDayLayout(dayLectures, startHour);
     });
     return map;
@@ -847,6 +881,7 @@ export default function SchedulePage() {
                           <ScheduleExamCoverEvent
                             key={ex.id}
                             exam={ex}
+                            courses={courses}
                             top={ex.top}
                             height={ex.height}
                             onClick={(item) => setEditingExam(item)}
@@ -858,6 +893,7 @@ export default function SchedulePage() {
                           <GoogleCalendarEvent
                             key={l.id}
                             lecture={l}
+                            courses={courses}
                             isDragging={draggedLecture?.id === l.id}
                             onDragStart={handleDragStart}
                             onDragEnd={handleDragEnd}
