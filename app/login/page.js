@@ -53,7 +53,7 @@ export default function LoginPage() {
     <main className="relative grid min-h-screen overflow-hidden bg-background lg:grid-cols-2">
       <section className="relative hidden overflow-hidden bg-primary p-12 text-primary-foreground lg:flex lg:flex-col lg:justify-between">
         <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary/70" />
-        <div className="relative inline-flex w-fit rounded-xl bg-white p-3 shadow-lg"><BrandMark /></div>
+        <div className="relative inline-flex w-fit rounded-xl bg-white dark:bg-card/90 dark:border dark:border-border/60 p-3 shadow-lg"><BrandMark /></div>
         <div className="relative max-w-md">
           <Badge className="mb-5 bg-primary-foreground/15 text-primary-foreground hover:bg-primary-foreground/15">
             Your semester, organized
