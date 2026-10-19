@@ -127,3 +127,4 @@ export default function SyncStatusBadge({ collapsed = false, className = "" }) {
     </button>
   );
 }
+
