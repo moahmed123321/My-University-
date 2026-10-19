@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { DAY_NAMES, DAY_ORDER, fmtTime, isoDate } from "@/lib/helpers";
-import { removeRow } from "@/lib/db";
+import { removeRow, updateRow } from "@/lib/db";
+import { dbGetAll, dbPutMany } from "@/lib/offlineDb";
 import AddModal from "@/components/AddModal";
 import EditLectureModal from "@/components/EditLectureModal";
 import EditExamModal from "@/components/EditExamModal";
@@ -353,25 +354,74 @@ export default function SchedulePage() {
   const gridContainerRef = useRef(null);
 
   const load = useCallback(async () => {
-    const [c, l, e] = await Promise.all([
-      supabase.from("courses").select("*").order("name"),
-      supabase
-        .from("lectures")
-        .select("*, courses(id, name, code, color, professor)")
-        .order("start_time"),
-      supabase
-        .from("exams")
-        .select("*, courses(id, name, code, color)")
-        .order("exam_date"),
-    ]);
-    setCourses(c.data || []);
-    setLectures(l.data || []);
-    setExams(e.data || []);
-    setLoading(false);
+    // 1. Immediately read from local IndexedDB
+    try {
+      const [localC, localL, localE] = await Promise.all([
+        dbGetAll("courses"),
+        dbGetAll("lectures"),
+        dbGetAll("exams"),
+      ]);
+
+      if (localC.length || localL.length || localE.length) {
+        const cMap = new Map(localC.map((c) => [c.id, c]));
+        const joinedL = localL.map((l) => ({ ...l, courses: cMap.get(l.course_id) || null }));
+        const joinedE = localE.map((e) => ({ ...e, courses: cMap.get(e.course_id) || null }));
+
+        setCourses([...localC].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+        setLectures([...joinedL].sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")));
+        setExams([...joinedE].sort((a, b) => (a.exam_date || "").localeCompare(b.exam_date || "")));
+        setLoading(false);
+      }
+    } catch (e) {
+      console.warn("[Schedule] Error reading local db:", e);
+    }
+
+    // 2. Fetch fresh from Supabase if online
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const [c, l, e] = await Promise.all([
+        supabase.from("courses").select("*").order("name"),
+        supabase
+          .from("lectures")
+          .select("*, courses(id, name, code, color, professor)")
+          .order("start_time"),
+        supabase
+          .from("exams")
+          .select("*, courses(id, name, code, color)")
+          .order("exam_date"),
+      ]);
+
+      if (c.data) {
+        setCourses(c.data);
+        dbPutMany("courses", c.data);
+      }
+      if (l.data) {
+        setLectures(l.data);
+        dbPutMany("lectures", l.data.map(({ courses, ...rest }) => rest));
+      }
+      if (e.data) {
+        setExams(e.data);
+        dbPutMany("exams", e.data.map(({ courses, ...rest }) => rest));
+      }
+    } catch (err) {
+      console.warn("[Schedule] Network fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  useEffect(() => {
+    const handleUpdate = () => load();
+    window.addEventListener("uni:data-updated", handleUpdate);
+    return () => window.removeEventListener("uni:data-updated", handleUpdate);
   }, [load]);
 
   // Live timer for current time indicator (updates every minute)
@@ -578,15 +628,12 @@ export default function SchedulePage() {
     setDraggedLecture(null);
     setDragOverInfo(null);
 
-    // Persist to Supabase
-    await supabase
-      .from("lectures")
-      .update({
-        day_of_week: day,
-        start_time: newStart,
-        end_time: newEnd,
-      })
-      .eq("id", draggedLecture.id);
+    // Persist changes locally and to cloud
+    await updateRow("lectures", draggedLecture.id, {
+      day_of_week: day,
+      start_time: newStart,
+      end_time: newEnd,
+    });
   }
 
   const del = async (table, id) => {

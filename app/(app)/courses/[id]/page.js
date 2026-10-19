@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { fmtDate, fmtDateTime, linkType, sortItems } from "@/lib/helpers";
 import { removeRow, toggleDone } from "@/lib/db";
+import { dbGet, dbGetAll, dbPut, dbPutMany } from "@/lib/offlineDb";
 import { Card, Empty, PageHeader } from "@/components/ui";
 import ItemTable from "@/components/ItemTable";
 import EditCourseModal from "@/components/EditCourseModal";
@@ -30,25 +31,85 @@ export default function CourseDetail() {
   const [adding, setAdding] = useState(null);
 
   const load = useCallback(async () => {
-    const [c, tp, t, a, m, n] = await Promise.all([
-      supabase.from("courses").select("*").eq("id", id).maybeSingle(),
-      supabase.from("topics").select("*").eq("course_id", id).order("created_at", { ascending: false }),
-      supabase.from("tasks").select("*").eq("course_id", id),
-      supabase.from("assignments").select("*").eq("course_id", id),
-      supabase.from("materials").select("*").eq("course_id", id).order("created_at", { ascending: false }),
-      supabase.from("notes").select("*").eq("course_id", id).order("created_at", { ascending: false }),
-    ]);
-    setCourse(c.data);
-    setTopics(tp.data || []);
-    setTasks(t.data || []);
-    setAssignments(a.data || []);
-    setMaterials(m.data || []);
-    setNotes(n.data || []);
-    setLoading(false);
+    // 1. Immediately read from local IndexedDB
+    try {
+      const [localC, localTp, localT, localA, localM, localN] = await Promise.all([
+        dbGet("courses", id),
+        dbGetAll("topics", (item) => item.course_id === id),
+        dbGetAll("tasks", (item) => item.course_id === id),
+        dbGetAll("assignments", (item) => item.course_id === id),
+        dbGetAll("materials", (item) => item.course_id === id),
+        dbGetAll("notes", (item) => item.course_id === id),
+      ]);
+
+      if (localC) {
+        setCourse(localC);
+        setTopics([...localTp].sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")));
+        setTasks(localT);
+        setAssignments(localA);
+        setMaterials([...localM].sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")));
+        setNotes([...localN].sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")));
+        setLoading(false);
+      }
+    } catch (e) {
+      console.warn("[CourseDetail] Error reading local db:", e);
+    }
+
+    // 2. Fetch fresh from Supabase if online
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const [c, tp, t, a, m, n] = await Promise.all([
+        supabase.from("courses").select("*").eq("id", id).maybeSingle(),
+        supabase.from("topics").select("*").eq("course_id", id).order("created_at", { ascending: false }),
+        supabase.from("tasks").select("*").eq("course_id", id),
+        supabase.from("assignments").select("*").eq("course_id", id),
+        supabase.from("materials").select("*").eq("course_id", id).order("created_at", { ascending: false }),
+        supabase.from("notes").select("*").eq("course_id", id).order("created_at", { ascending: false }),
+      ]);
+
+      if (c.data) {
+        setCourse(c.data);
+        dbPut("courses", c.data);
+      }
+      if (tp.data) {
+        setTopics(tp.data);
+        dbPutMany("topics", tp.data);
+      }
+      if (t.data) {
+        setTasks(t.data);
+        dbPutMany("tasks", t.data);
+      }
+      if (a.data) {
+        setAssignments(a.data);
+        dbPutMany("assignments", a.data);
+      }
+      if (m.data) {
+        setMaterials(m.data);
+        dbPutMany("materials", m.data);
+      }
+      if (n.data) {
+        setNotes(n.data);
+        dbPutMany("notes", n.data);
+      }
+    } catch (err) {
+      console.warn("[CourseDetail] Network fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  useEffect(() => {
+    const handleUpdate = () => load();
+    window.addEventListener("uni:data-updated", handleUpdate);
+    return () => window.removeEventListener("uni:data-updated", handleUpdate);
   }, [load]);
 
   if (loading) return <p className="text-sm text-gray-500">Loading...</p>;

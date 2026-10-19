@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { insertRow, updateRow } from "@/lib/db";
+import { dbGetAll, dbPutMany } from "@/lib/offlineDb";
 import { DAY_NAMES, DAY_ORDER, fmtTime } from "@/lib/helpers";
 import AddModal from "@/components/AddModal";
 import { FocusButton } from "@/components/PomodoroTimer";
@@ -580,7 +582,7 @@ function QuickModal({
           [ASSIGNMENTS.done]: false,
         },
       };
-    const { error } = await supabase.from(row.table).insert(row.data);
+    const { error } = await insertRow(row.table, row.data);
     setSaving(false);
     if (error) return setErr(error.message);
     const targetCourse = courses.find((c) => String(c.id) === String(course));
@@ -710,29 +712,88 @@ export default function OverviewPage() {
   const [now, setNow] = useState(() => new Date());
 
   const load = useCallback(async () => {
-    const [c, l, t, a, e] = await Promise.all([
-      supabase.from("courses").select("*").order("name"),
-      supabase
-        .from("lectures")
-        .select("*, courses(id, name, code, color, professor)")
-        .order("start_time"),
-      supabase.from(TASKS.table).select("*").limit(50),
-      supabase.from(ASSIGNMENTS.table).select("*").limit(50),
-      supabase
-        .from("exams")
-        .select("*, courses(id, name, code, color, professor)")
-        .order("exam_date"),
-    ]);
-    setCourses(c.data || []);
-    setLectures(l.data || []);
-    setTasks(t.error ? [] : t.data || []);
-    setAssigns(a.error ? [] : a.data || []);
-    setExams(e.error ? [] : e.data || []);
-    setLoading(false);
+    // 1. Immediately read from local IndexedDB cache for instant display
+    try {
+      const [localC, localL, localT, localA, localE] = await Promise.all([
+        dbGetAll("courses"),
+        dbGetAll("lectures"),
+        dbGetAll("tasks"),
+        dbGetAll("assignments"),
+        dbGetAll("exams"),
+      ]);
+
+      if (localC.length || localL.length || localT.length || localA.length || localE.length) {
+        const cMap = new Map(localC.map((c) => [c.id, c]));
+        const joinedL = localL.map((l) => ({ ...l, courses: cMap.get(l.course_id) || null }));
+        const joinedE = localE.map((e) => ({ ...e, courses: cMap.get(e.course_id) || null }));
+
+        setCourses([...localC].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+        setLectures([...joinedL].sort((a, b) => (a.start_time || "").localeCompare(b.start_time || "")));
+        setTasks(localT);
+        setAssigns(localA);
+        setExams([...joinedE].sort((a, b) => (a.exam_date || "").localeCompare(b.exam_date || "")));
+        setLoading(false);
+      }
+    } catch (e) {
+      console.warn("[Dashboard] Error reading local db:", e);
+    }
+
+    // 2. If online, fetch fresh data from Supabase in background
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const [c, l, t, a, e] = await Promise.all([
+        supabase.from("courses").select("*").order("name"),
+        supabase
+          .from("lectures")
+          .select("*, courses(id, name, code, color, professor)")
+          .order("start_time"),
+        supabase.from(TASKS.table).select("*").limit(50),
+        supabase.from(ASSIGNMENTS.table).select("*").limit(50),
+        supabase
+          .from("exams")
+          .select("*, courses(id, name, code, color, professor)")
+          .order("exam_date"),
+      ]);
+
+      if (c.data) {
+        setCourses(c.data);
+        dbPutMany("courses", c.data);
+      }
+      if (l.data) {
+        setLectures(l.data);
+        dbPutMany("lectures", l.data.map(({ courses, ...rest }) => rest));
+      }
+      if (t.data) {
+        setTasks(t.data);
+        dbPutMany("tasks", t.data);
+      }
+      if (a.data) {
+        setAssigns(a.data);
+        dbPutMany("assignments", a.data);
+      }
+      if (e.data) {
+        setExams(e.data);
+        dbPutMany("exams", e.data.map(({ courses, ...rest }) => rest));
+      }
+    } catch (err) {
+      console.warn("[Dashboard] Network fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  useEffect(() => {
+    const handleUpdate = () => load();
+    window.addEventListener("uni:data-updated", handleUpdate);
+    return () => window.removeEventListener("uni:data-updated", handleUpdate);
   }, [load]);
 
   useEffect(() => {
@@ -813,11 +874,7 @@ export default function OverviewPage() {
   const toggle = async (cfg, rows, setRows, row) => {
     const v = !row[cfg.done];
     setRows(rows.map((r) => (r.id === row.id ? { ...r, [cfg.done]: v } : r))); // optimistic
-    const { error } = await supabase
-      .from(cfg.table)
-      .update({ [cfg.done]: v })
-      .eq("id", row.id);
-    if (error) load();
+    await updateRow(cfg.table, row.id, { [cfg.done]: v });
   };
 
   const sortedAssigns = useMemo(

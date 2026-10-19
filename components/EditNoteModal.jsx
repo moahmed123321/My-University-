@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { updateRow, removeRow } from "@/lib/db";
 import Modal from "@/components/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,10 +33,7 @@ export default function EditNoteModal({ note, courses = [], onClose, onSaved, on
       course_id: courseId || null,
     };
 
-    const { error: updateError } = await supabase
-      .from("notes")
-      .update(payload)
-      .eq("id", note.id);
+    const { error: updateError } = await updateRow("notes", note.id, payload);
 
     setSaving(false);
     if (updateError) {
@@ -48,14 +46,10 @@ export default function EditNoteModal({ note, courses = [], onClose, onSaved, on
   }
 
   async function handleDelete() {
-    if (!confirm("Are you sure you want to delete this note?")) return;
     setDeleting(true);
-    const { error: delError } = await supabase.from("notes").delete().eq("id", note.id);
+    const success = await removeRow("notes", note.id, "Are you sure you want to delete this note?");
     setDeleting(false);
-    if (delError) {
-      setError(delError.message);
-      return;
-    }
+    if (!success) return;
     if (onDeleted) onDeleted();
     onClose();
   }

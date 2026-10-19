@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { dbGetAll, dbPutMany } from "@/lib/offlineDb";
 import AddModal from "@/components/AddModal";
 import EditCourseModal from "@/components/EditCourseModal";
 import { ChevronRight, Pencil, Plus } from "lucide-react";
@@ -285,38 +286,81 @@ export default function CoursesPage() {
   const [editing, setEditing] = useState(null);
 
   const load = useCallback(async () => {
-    const [c, t, n] = await Promise.all([
-      supabase.from("courses").select("*").order("name"),
-      supabase.from(TASKS.table).select(`${TASKS.course}, ${TASKS.done}`),
-      supabase.from("notes").select("id, course_id"),
-    ]);
-    setCourses(c.data || []);
-    if (t.error || !t.data) {
-      setCounts(null);
-    } else {
-      const m = {};
-      t.data.forEach((r) => {
-        if (!r[TASKS.done])
-          m[r[TASKS.course]] = (m[r[TASKS.course]] || 0) + 1;
-      });
-      setCounts(m);
+    // 1. Immediately read from local IndexedDB
+    try {
+      const [localC, localT, localN] = await Promise.all([
+        dbGetAll("courses"),
+        dbGetAll("tasks"),
+        dbGetAll("notes"),
+      ]);
+
+      if (localC.length) {
+        setCourses([...localC].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+        const m = {};
+        localT.forEach((r) => {
+          if (!r[TASKS.done]) m[r[TASKS.course]] = (m[r[TASKS.course]] || 0) + 1;
+        });
+        setCounts(m);
+
+        const nm = {};
+        localN.forEach((r) => {
+          if (r.course_id) nm[r.course_id] = (nm[r.course_id] || 0) + 1;
+        });
+        setNoteCounts(nm);
+        setLoading(false);
+      }
+    } catch (e) {
+      console.warn("[Courses] Error reading local db:", e);
     }
-    if (n.error || !n.data) {
-      setNoteCounts(null);
-    } else {
-      const nm = {};
-      (n.data || []).forEach((r) => {
-        if (r.course_id) {
-          nm[r.course_id] = (nm[r.course_id] || 0) + 1;
-        }
-      });
-      setNoteCounts(nm);
+
+    // 2. Fetch fresh from Supabase if online
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    try {
+      const [c, t, n] = await Promise.all([
+        supabase.from("courses").select("*").order("name"),
+        supabase.from(TASKS.table).select(`${TASKS.course}, ${TASKS.done}`),
+        supabase.from("notes").select("id, course_id"),
+      ]);
+
+      if (c.data) {
+        setCourses(c.data);
+        dbPutMany("courses", c.data);
+      }
+
+      if (t.data) {
+        const m = {};
+        t.data.forEach((r) => {
+          if (!r[TASKS.done]) m[r[TASKS.course]] = (m[r[TASKS.course]] || 0) + 1;
+        });
+        setCounts(m);
+      }
+
+      if (n.data) {
+        const nm = {};
+        n.data.forEach((r) => {
+          if (r.course_id) nm[r.course_id] = (nm[r.course_id] || 0) + 1;
+        });
+        setNoteCounts(nm);
+      }
+    } catch (err) {
+      console.warn("[Courses] Network fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  useEffect(() => {
+    const handleUpdate = () => load();
+    window.addEventListener("uni:data-updated", handleUpdate);
+    return () => window.removeEventListener("uni:data-updated", handleUpdate);
   }, [load]);
 
   return (

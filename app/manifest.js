@@ -2,10 +2,13 @@ export default function manifest() {
   return {
     name: "My University",
     short_name: "My University",
-    start_url: "/",
+    description: "Manage courses, schedule, tasks, notes and assignments offline and synced",
+    start_url: "/dashboard",
+    scope: "/",
     display: "standalone",
+    orientation: "portrait-primary",
     background_color: "#ffffff",
-    theme_color: "#ffffff",
+    theme_color: "#c8102e",
     icons: [
       {
         src: "/icon-192.png",

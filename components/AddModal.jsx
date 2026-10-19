@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { insertRow } from "@/lib/db";
 import { DAY_NAMES, DAY_ORDER } from "@/lib/helpers";
 import { setStoredLectureColor } from "@/lib/lectureColors";
 import Modal from "./Modal";
@@ -153,7 +154,7 @@ export default function AddModal({ type, courses = [], defaultCourseId = "", ini
       delete payload.color;
     }
 
-    const { data, error } = await supabase.from(cfg.table).insert(payload).select().maybeSingle();
+    const { data, error } = await insertRow(cfg.table, payload);
     setSaving(false);
     if (error) {
       setError(error.message);

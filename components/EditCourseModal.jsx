@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { updateRow } from "@/lib/db";
 import Modal from "@/components/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,7 @@ export default function EditCourseModal({ course, onClose, onSaved }) {
     event.preventDefault();
     setSaving(true);
     setError("");
-    const { error: updateError } = await supabase.from("courses").update(values).eq("id", course.id);
+    const { error: updateError } = await updateRow("courses", course.id, values);
     setSaving(false);
     if (updateError) return setError(updateError.message);
     onSaved();

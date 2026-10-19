@@ -5,8 +5,11 @@ import { useTheme } from "next-themes";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Layers, Moon, Palette, ShieldCheck, Sun, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Check, Cloud, CloudOff, Database, Layers, Moon, Palette, RefreshCw, ShieldCheck, Sun, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { syncNow, getSyncState, downloadCloudData } from "@/lib/syncManager";
+import { countTable } from "@/lib/offlineDb";
 
 const THEMES = [
   {
@@ -60,6 +63,21 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [syncInfo, setSyncInfo] = useState({
+    isOnline: true,
+    isSyncing: false,
+    pendingCount: 0,
+    lastSynced: null,
+  });
+  const [itemCount, setItemCount] = useState(0);
+
+  const refreshCounts = async () => {
+    const tables = ["courses", "lectures", "exams", "tasks", "assignments", "topics", "notes", "materials"];
+    const counts = await Promise.all(tables.map((t) => countTable(t)));
+    setItemCount(counts.reduce((a, b) => a + b, 0));
+    const state = await getSyncState();
+    setSyncInfo(state);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -68,6 +86,19 @@ export default function SettingsPage() {
         setUserEmail(data.user.email);
       }
     });
+
+    refreshCounts();
+
+    const handleStatus = (e) => {
+      if (e.detail) setSyncInfo((prev) => ({ ...prev, ...e.detail }));
+      refreshCounts();
+    };
+    window.addEventListener("uni:sync-status", handleStatus);
+    window.addEventListener("uni:data-updated", refreshCounts);
+    return () => {
+      window.removeEventListener("uni:sync-status", handleStatus);
+      window.removeEventListener("uni:data-updated", refreshCounts);
+    };
   }, []);
 
   const currentTheme = mounted ? theme : "light";
@@ -169,6 +200,89 @@ export default function SettingsPage() {
                 </button>
               );
             })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Offline Storage & Cloud Sync ────────────────────────────── */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-2">
+            <Database className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Offline Storage & Cloud Sync</CardTitle>
+          </div>
+          <CardDescription>
+            Keep your schedule, notes, and tasks available on this device when offline, and synchronized with Supabase when connected.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Connection Status</p>
+              <div className="flex items-center gap-2 pt-0.5">
+                {syncInfo.isOnline ? (
+                  <>
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Online & Connected</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                    <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Offline Mode (Local Storage)</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Local Stored Items</p>
+              <p className="text-sm font-medium text-foreground pt-0.5">
+                {itemCount} items saved on device
+                {syncInfo.pendingCount > 0 && (
+                  <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    {syncInfo.pendingCount} pending upload
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <p className="text-xs text-muted-foreground">
+              Last synchronized:{" "}
+              <span className="font-medium text-foreground">
+                {syncInfo.lastSynced ? new Date(syncInfo.lastSynced).toLocaleString() : "Not synced yet"}
+              </span>
+            </p>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  const { data } = await supabase.auth.getSession();
+                  if (data?.session?.user?.id) {
+                    await downloadCloudData(data.session.user.id);
+                    await refreshCounts();
+                  }
+                }}
+                disabled={!syncInfo.isOnline || syncInfo.isSyncing}
+                className="gap-2 text-xs"
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5", syncInfo.isSyncing && "animate-spin")} />
+                Refresh from Cloud
+              </Button>
+
+              <Button
+                size="sm"
+                onClick={() => syncNow()}
+                disabled={!syncInfo.isOnline || syncInfo.isSyncing}
+                className="gap-2 text-xs"
+              >
+                <Cloud className="h-3.5 w-3.5" />
+                {syncInfo.isSyncing ? "Syncing..." : "Sync Now"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -13,13 +13,44 @@ export default function AppLayout({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) router.replace("/login");
-      else setReady(true);
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (data?.session) {
+        try {
+          localStorage.setItem(
+            "uni_offline_user",
+            JSON.stringify({ id: data.session.user.id, email: data.session.user.email })
+          );
+        } catch {}
+        setReady(true);
+      } else {
+        const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+        const cachedUser = typeof window !== "undefined" && localStorage.getItem("uni_offline_user");
+
+        if (isOffline && cachedUser) {
+          // Allow offline access to previously authenticated user
+          setReady(true);
+        } else {
+          router.replace("/login");
+        }
+      }
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) router.replace("/login");
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        try {
+          localStorage.setItem(
+            "uni_offline_user",
+            JSON.stringify({ id: session.user.id, email: session.user.email })
+          );
+        } catch {}
+      } else if (event === "SIGNED_OUT") {
+        try {
+          localStorage.removeItem("uni_offline_user");
+        } catch {}
+        router.replace("/login");
+      }
     });
+
     return () => sub.subscription.unsubscribe();
   }, [router]);
 

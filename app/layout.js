@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export const metadata = {
   title: "Uni Manager",
@@ -39,7 +40,11 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        <ThemeProvider>{children}<Toaster /></ThemeProvider>
+        <ThemeProvider>
+          <ServiceWorkerRegister />
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

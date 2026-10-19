@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { dbGetAll, dbPutMany } from "@/lib/offlineDb";
 import BrandMark from "@/components/BrandMark";
+import SyncStatusBadge from "@/components/SyncStatusBadge";
 import { BookOpen, CalendarDays, ChevronDown, ChevronRight, LayoutDashboard, LogOut, CheckSquare, PanelLeftClose, PanelLeftOpen, Settings } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -30,7 +32,37 @@ export default function Sidebar() {
   }, [pathname]);
 
   useEffect(() => {
-    supabase.from("courses").select("id, name, color").order("name").then(({ data }) => setCourses(data || []));
+    // 1. Immediately read from IndexedDB
+    dbGetAll("courses").then((cached) => {
+      if (cached && cached.length) {
+        setCourses(cached.sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+      }
+    });
+
+    // 2. Refresh from Supabase if online
+    if (typeof navigator !== "undefined" && navigator.onLine) {
+      supabase
+        .from("courses")
+        .select("id, name, color")
+        .order("name")
+        .then(({ data }) => {
+          if (data) {
+            setCourses(data);
+            dbPutMany("courses", data);
+          }
+        });
+    }
+
+    // 3. Listen to data-updated
+    const handleUpdate = () => {
+      dbGetAll("courses").then((cached) => {
+        if (cached && cached.length) {
+          setCourses(cached.sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+        }
+      });
+    };
+    window.addEventListener("uni:data-updated", handleUpdate);
+    return () => window.removeEventListener("uni:data-updated", handleUpdate);
   }, []);
 
   async function signOut() {
@@ -137,8 +169,9 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* Bottom actions: Settings (standard) above Sign out (red) */}
-        <div className="mt-auto space-y-1 border-t border-border/60 pt-3">
+        {/* Bottom actions: SyncStatusBadge, Settings, Sign out */}
+        <div className="mt-auto space-y-1.5 border-t border-border/60 pt-3">
+          <SyncStatusBadge collapsed={collapsed} />
           <Link
             href="/settings"
             title={collapsed ? "Settings" : undefined}

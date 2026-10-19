@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { dbGetAll, dbPutMany } from "@/lib/offlineDb";
 import { sortItems } from "@/lib/helpers";
 import { Card, PageHeader } from "@/components/ui";
 import AddModal from "@/components/AddModal";
@@ -16,19 +17,68 @@ export default function TasksPage() {
   const [modal, setModal] = useState(null);
 
   const load = useCallback(async () => {
-    const [c, t, a] = await Promise.all([
-      supabase.from("courses").select("*").order("name"),
-      supabase.from("tasks").select("*, courses(name, code)"),
-      supabase.from("assignments").select("*, courses(name, code)"),
-    ]);
-    setCourses(c.data || []);
-    setTasks(t.data || []);
-    setAssignments(a.data || []);
-    setLoading(false);
+    // 1. Immediately read from local IndexedDB
+    try {
+      const [localC, localT, localA] = await Promise.all([
+        dbGetAll("courses"),
+        dbGetAll("tasks"),
+        dbGetAll("assignments"),
+      ]);
+
+      if (localC.length || localT.length || localA.length) {
+        const cMap = new Map(localC.map((c) => [c.id, c]));
+        const joinedT = localT.map((t) => ({ ...t, courses: cMap.get(t.course_id) || null }));
+        const joinedA = localA.map((a) => ({ ...a, courses: cMap.get(a.course_id) || null }));
+
+        setCourses([...localC].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+        setTasks(joinedT);
+        setAssignments(joinedA);
+        setLoading(false);
+      }
+    } catch (e) {
+      console.warn("[Tasks] Error reading local db:", e);
+    }
+
+    // 2. Fetch fresh from Supabase if online
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const [c, t, a] = await Promise.all([
+        supabase.from("courses").select("*").order("name"),
+        supabase.from("tasks").select("*, courses(name, code)"),
+        supabase.from("assignments").select("*, courses(name, code)"),
+      ]);
+
+      if (c.data) {
+        setCourses(c.data);
+        dbPutMany("courses", c.data);
+      }
+      if (t.data) {
+        setTasks(t.data);
+        dbPutMany("tasks", t.data.map(({ courses, ...rest }) => rest));
+      }
+      if (a.data) {
+        setAssignments(a.data);
+        dbPutMany("assignments", a.data.map(({ courses, ...rest }) => rest));
+      }
+    } catch (err) {
+      console.warn("[Tasks] Network fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  useEffect(() => {
+    const handleUpdate = () => load();
+    window.addEventListener("uni:data-updated", handleUpdate);
+    return () => window.removeEventListener("uni:data-updated", handleUpdate);
   }, [load]);
 
   const byCourse = (rows) => sortItems(filter ? rows.filter((r) => r.course_id === filter) : rows);

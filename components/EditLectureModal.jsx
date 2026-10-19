@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { updateRow, removeRow } from "@/lib/db";
 import { DAY_NAMES, DAY_ORDER } from "@/lib/helpers";
 import {
   LECTURE_COLOR_PRESETS,
@@ -41,10 +42,7 @@ export default function EditLectureModal({ lecture, courses = [], onClose, onSav
       room: room || null,
     };
 
-    const { error: updateError } = await supabase
-      .from("lectures")
-      .update(payload)
-      .eq("id", lecture.id);
+    const { error: updateError } = await updateRow("lectures", lecture.id, payload);
 
     setSaving(false);
     if (updateError) {
@@ -60,14 +58,10 @@ export default function EditLectureModal({ lecture, courses = [], onClose, onSav
   }
 
   async function handleDelete() {
-    if (!confirm("Are you sure you want to delete this lecture?")) return;
     setDeleting(true);
-    const { error: delError } = await supabase.from("lectures").delete().eq("id", lecture.id);
+    const success = await removeRow("lectures", lecture.id, "Are you sure you want to delete this lecture?");
     setDeleting(false);
-    if (delError) {
-      setError(delError.message);
-      return;
-    }
+    if (!success) return;
     deleteStoredLectureColor(lecture.id);
     if (onDeleted) onDeleted();
     onClose();
