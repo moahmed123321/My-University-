@@ -263,7 +263,7 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
 
   return (
     <div
-      className="grid grid-cols-[48px_12px_minmax(0,1fr)] gap-2 py-1.5 sm:grid-cols-[62px_14px_minmax(0,1fr)] sm:gap-3 min-w-0 w-full"
+      className="grid grid-cols-[68px_12px_minmax(0,1fr)] gap-2 py-1.5 sm:grid-cols-[76px_14px_minmax(0,1fr)] sm:gap-3 min-w-0 w-full"
       style={{ "--c": c }}
     >
       {/* ─── Left side: Time ─── */}
@@ -275,14 +275,14 @@ function TimelineRow({ l, i, n, isToday, nowMin, upNext }) {
       >
         <span
           className={cn(
-            "block text-[12px] sm:text-[13.5px] font-bold tabular-nums tracking-tight",
+            "block text-[11px] sm:text-[12.5px] font-bold tabular-nums tracking-tight whitespace-nowrap",
             now ? "text-primary font-extrabold" : "text-foreground"
           )}
         >
           {fmtTime(l.start_time)}
         </span>
         {l.end_time && (
-          <span className="block text-[10.5px] sm:text-[11.5px] font-medium text-muted-foreground/80 tabular-nums mt-0.5">
+          <span className="block text-[10px] sm:text-[11px] font-medium text-muted-foreground/80 tabular-nums mt-0.5 whitespace-nowrap">
             {fmtTime(l.end_time)}
           </span>
         )}

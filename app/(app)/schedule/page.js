@@ -39,10 +39,12 @@ const mix = (c, pct, base = "hsl(var(--card))") =>
 
 // 12-hour hour label (e.g. "8 AM", "12 PM", "3 PM")
 function formatHourLabel(h) {
-  if (h === 0 || h === 24) return "12 AM";
-  if (h < 12) return `${h} AM`;
-  if (h === 12) return "12 PM";
-  return `${h - 12} PM`;
+  const num = Number(h);
+  if (isNaN(num)) return String(h);
+  if (num === 0 || num === 24) return "12 AM";
+  if (num < 12) return `${num} AM`;
+  if (num === 12) return "12 PM";
+  return `${num - 12} PM`;
 }
 
 function formatMinutesToTime(min) {
